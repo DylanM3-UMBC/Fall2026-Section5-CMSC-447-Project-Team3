@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SignUpScreen() {
@@ -13,14 +13,14 @@ export default function SignUpScreen() {
 
     const handleSignUp = async () => {
         if (!email || !password) {
-            Alert.alert("Error", "Please fill in all fields");
+            //Alert.alert("Error", "Please fill in all fields");
             setShowPreview(true);
             setErrorMessage('Please fill in all fields before proceeding');
             return;
         }
 
         if (password.length < 8) {
-            Alert.alert("Error", "Password must be at least 8 characters")
+            //Alert.alert("Error", "Password must be at least 8 characters")
             setShowPreview(true);
             setErrorMessage('Password must be at least 8 characters');
             return;

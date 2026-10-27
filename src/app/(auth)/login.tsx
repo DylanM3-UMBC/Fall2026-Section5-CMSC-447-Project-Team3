@@ -28,14 +28,14 @@ export default function loginScreen() {
     // This a helper function to help generate a json file you asked. This is only for testing purposes only
     const handleGenerateJson = () => {
         if (!email || !password) {
-            Alert.alert("Error", "Please fill in all fields");
+            //Alert.alert("Error", "Please fill in all fields");
             setShowPreview(true);
             setErrorMessage('Please fill in all fields');
             return;
         }
 
         if (password.length < 8) {
-            Alert.alert("Error", "Password must be at least 8 characters")
+            //Alert.alert("Error", "Password must be at least 8 characters")
             setShowPreview(true);
             setErrorMessage('Password must be at least 8 characters');
             return;

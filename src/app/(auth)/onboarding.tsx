@@ -42,7 +42,7 @@ export default function onBoardingScreen() {
     // This a helper function to help generate a json file you asked. This is only for testing purposes only
     const handleGenerateJson = () => {
         if (!name || !username) {
-            Alert.alert("Error", "Please fill in all fields to complete setup");
+            //Alert.alert("Error", "Please fill in all fields to complete setup");
             setShowPreview(true);
             setErrorMessage('Please fill in all fields to complete setup');
             return;
