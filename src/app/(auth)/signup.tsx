@@ -1,25 +1,38 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SignUpScreen() {
+    const [showPreview, setShowPreview] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const router = useRouter();
 
-    // useEffect(() => {
-    //     router.push("/(auth)/onboarding")
-    // })
 
     const handleSignUp = async () => {
         if (!email || !password) {
-            Alert.alert("Error", "Please fill in all fields")
+            Alert.alert("Error", "Please fill in all fields");
+            setShowPreview(true);
+            setErrorMessage('Please fill in all fields before proceeding');
+            return;
         }
 
-        if (password.length < 3) {
-            Alert.alert("Error", "Password must be at least 3 characters")
+        if (password.length < 8) {
+            Alert.alert("Error", "Password must be at least 8 characters")
+            setShowPreview(true);
+            setErrorMessage('Password must be at least 8 characters');
+            return;
         }
+        
+        router.push({
+            pathname: "/(auth)/onboarding",
+            params: { 
+                email: email,
+                password: password,
+            }
+        })
     }
 
     return (
@@ -60,6 +73,26 @@ export default function SignUpScreen() {
                     </TouchableOpacity> 
                 </View>
             </View>
+
+
+            <Modal visible={showPreview} transparent animationType="fade">
+                <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Error</Text>
+                    <Text style={styles.descriptionInput}> {errorMessage} </Text>
+                    <View style={styles.modalButtons}>
+                        <TouchableOpacity 
+                            style={[styles.modalButton, styles.cancelButton]}
+                            onPress={() => {
+                            setShowPreview(false);
+                            }}
+                        >
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -120,4 +153,59 @@ const styles = StyleSheet.create({
         fontWeight: 600,
         color: "#000"
     },
+
+
+      
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 16,
+    textAlign: "center",
+    color: "#f63c3c",
+  },
+  descriptionInput: {
+    width: "100%",
+    minHeight: 40,
+    maxHeight: 120,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    color: "#000",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#ff0000",
+  },
+  cancelButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 })
