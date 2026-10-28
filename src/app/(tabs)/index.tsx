@@ -1,141 +1,61 @@
 import { useState } from "react";
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { PieChart } from "react-native-gifted-charts";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { EmptyPlaceholder, FileCard, PickerWrapper, UploadedFile } from '../../components/pdfprojectItemComponent';
 
-export default function Index() {
-  const COMMENT_DATA = [
-    { id: '1', text: 'Great job on the project!' },
-    { id: '2', text: 'I think we should consider adding more features.' },
-    { id: '3', text: 'Miku Miku ooo-eee-oo.' },
-    { id: '4', text: 'Is this thing working?' },
-    { id: '5', text: 'EXCALBUUUUR!' },
-    { id: '6', text: 'What is this?' },
-  ]
-  
-  const renderCommentItem = ({ item }: { item: { id: string, text: string } }) => (
-    <View style={styles.CommentBox}>
-      <Text>{item.text}</Text>
-    </View>
-  );
 
-  type ItemData = {
-    id: string;
-    title: string;
-  };
 
-  const DATA: ItemData[] = [
-    { id: '1', title: 'Item_1' },
-    { id: '2', title: 'Item_2' },
-    { id: '3', title: 'Item_3' },
-    { id: '4', title: 'Item_4' },
-    { id: '5', title: 'Item_5' },
-    { id: '6', title: 'Item_6' },
-    { id: '7', title: 'Item_7' },
-    { id: '8', title: 'Item_8' },
-    { id: '9', title: 'Item_9' },
-  ]
 
-  type ItemProps = {
-    item: ItemData;
-    onPress: () => void;
-    backgroundColor: string;
-    textColor: string;
-  };
-
-  const Item = ({item, onPress, backgroundColor}: ItemProps) => (
-    <TouchableOpacity onPress={onPress} style={[styles.ProjectBox, {backgroundColor}]}>
-      <Text style={[styles.title, {color: "#fff"}]}>{item.title}</Text>
-    </TouchableOpacity>
-  );
-  
+export default function Index() { 
+  /* 
+  Keeps track of which tab is active ('Your Projects' or 'Shared Projects') and updates the UI accordingly. 
+  This state is used to conditionally render the content of each tab.
+  */ 
+  const [activeTab, setActiveTab] = useState('Your Projects');
+  const [projTitle, setProjTitle] = useState("");
+  const [showPreview, setShowPreview] = useState(false)
   const [selectedId, setSelectedId] = useState<string>();
 
   
-  const renderItem = ({item}: {item: ItemData}) => {
-    const backgroundColor = item.id === selectedId ? '#2d2c2d' : '#000';
-    const color = item.id === selectedId ? 'white' : 'black';
+  const [files, setFiles] = useState<UploadedFile[]>([]);
 
-    return (
-      <Item
-        item={item}
-        onPress={() => setSelectedId(item.id)}
-        backgroundColor={backgroundColor}
-        textColor={color}
-      />
-    );
-  };
-
-
-  // Keeps track of which tab is active ('Your Projects' or 'Shared Projects') and updates the UI accordingly. This state is used to conditionally render the content of each tab.
-  const [activeTab, setActiveTab] = useState('Your Projects');
+  const addFile = (f: any) => setFiles((p) => [...p, {
+    id: Math.random().toString(36).substring(2, 9),
+    name: f.name || 'Unnamed PDF',
+    uri: f.uri,
+    size: f.size,
+    uploadedAt: new Date().toLocaleTimeString(),
+  }]);
+ 
   
-
-  const pieData = [
-    {value: 40, color: '#11e662', text: 'Tasks Completed'},
-    {value: 20, color: '#ED6665', text: 'Tasks Not Completed'},
-  ];
-  
-
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}> 
         <Image 
-          source={require("../../../assets/images/myumbclogo.png")} 
+          source={require("../../assets/images/myumbclogo.png")} 
           style={styles.image} 
         />
-        <Text style={styles.title}>UMBC Project Dashboard</Text>
+        <Text style={styles.title}>UMBC Architectural/Engineering "Punch List" Project Dashboard</Text>
       </View>
-
       
       <View style={styles.SideBarBox}>
         <View style={styles.TaskContainer}>
-          <Text style={styles.BoxTitle}>Tasks</Text>
-          
-          <PieChart
-            data={pieData}
-            donut
-            radius={75}
-            innerRadius={50}
-          />
-
-          <View style={styles.legendContainer}>
-            {pieData.map((item, index) => (
-              <View key={index} style={styles.legendItem} >
-                <View
-                  style={{
-                    height: 10,
-                    width: 10,
-                    borderRadius: 5,
-                    backgroundColor: item.color,
-                    marginRight: 10,
-                  }}
-                />
-                <Text style={styles.legendText}>{item.text}</Text>
-              </View>
-            ))}
-          </View>
+          <Text style={styles.BoxTitle}>Task Summary Reports</Text>
+          <Text style={styles.placeholderText}>No Reports Generated</Text>
         </View>
-
-
         <View style={styles.CommentContainer}>
           <Text style={styles.BoxTitle}>Comments</Text>
-          <FlatList
-            data={COMMENT_DATA}
-            renderItem={renderCommentItem}
-            keyExtractor={item => item.id}
-            scrollEnabled={true}
-          />
+          <Text style={styles.placeholderText}>Inbox Empty</Text>
         </View>
       </View>
 
-
+   
       
-
+      
       <View style={styles.ProjectContainer}>
         <Text style={styles.ProjectTitle}>Projects</Text>
-      <View style={styles.tabBar}>
+
+        <View style={styles.tabBar}>
           <TouchableOpacity 
             onPress={() => setActiveTab('Your Projects')}
             style={[styles.tabButton, activeTab === 'Your Projects' && styles.activeTabButton]}
@@ -153,25 +73,44 @@ export default function Index() {
               Shared Projects
             </Text>
           </TouchableOpacity>
-
         </View>
 
+        <PickerWrapper onFilePicked={addFile}>
+          {(openPicker) => (
+          <View style={styles.CreateProjectButton}>
+            <TouchableOpacity onPress={openPicker} style={styles.CreateProjectlinkButton}>
+              <Text style={styles.CreateProjectText}>Create Project</Text>
+            </TouchableOpacity>
+          </View>
+          )}
+        </PickerWrapper>
+        
         {activeTab === 'Your Projects' ? (
           /* Render your projects list view here */
           <FlatList
-            data={DATA}
-            renderItem={renderItem}
-            keyExtractor={item => item.id}
-            extraData={selectedId}
-          /> 
+            data={files}
+            keyExtractor={(item) => item.id}
+            ListEmptyComponent={<EmptyPlaceholder />}
+            renderItem={({ item }) => <FileCard item={item} onDelete={(id) => setFiles((p) => p.filter(x => x.id !== id))} />}
+          />  
         ) : (
           /* Render your shared projects list view here */
-          <Text style={styles.placeholderText}>Showing Shared Projects Data...</Text>
+          <Text style={styles.placeholderText}>No Shared Projects...</Text>
         )}  
       </View>
     </SafeAreaView>
   );
 }
+
+
+
+
+
+
+
+
+
+
 
 const styles = StyleSheet.create({
   container: {
@@ -188,7 +127,7 @@ const styles = StyleSheet.create({
     left: "2%",
     width: 150,
     height: "100%",
-    resizeMode: 'center', // Options: 'cover', 'contain', 'stretch', 'repeat', 'center'
+    resizeMode: 'center',
   },
   header: {
     flex: 0,
@@ -210,6 +149,18 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
   },
+  banner: {
+    position: "absolute",
+    top: 63,
+    
+    width: "100%",
+    height: "10.8%",
+  },
+  // End Of Header
+
+
+
+
   BoxTitle: {
     position: "absolute",
     top: "5%",
@@ -218,8 +169,7 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: 22,
     fontWeight: "bold",
-  },
-  
+  }, 
   SideBarBox: {
     position: "absolute",
     right: "5%",
@@ -237,10 +187,7 @@ const styles = StyleSheet.create({
     minHeight: 500, // Ensures the container has a minimum height for better layout
     minWidth: 200,  // Ensures the container has a minimum width for better layout
 
-  },
-
-
-  
+  },  
   CommentContainer: {
     marginBottom: "20%",
     width: "100%",
@@ -277,8 +224,6 @@ const styles = StyleSheet.create({
     // Applies line to the bottom only, separating items natively
     borderBottomWidth: 2,
   },
-
-
   TaskContainer: {
     top: 20,
     marginTop: "15%",
@@ -298,33 +243,15 @@ const styles = StyleSheet.create({
 
     alignItems: 'center',
     justifyContent: "center",
-    paddingTop: -15,
-    paddingRight: 20,
+    paddingTop: 20,
 
   },
-
-  
-
-  legendContainer: {
-    position: "absolute",
-    bottom: "2%",
-    right: "2%",
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  legendText: {
-    color: '#000',
-    fontSize: 14,
-  },
+  // End of Sidebar Components
 
 
 
 
+  // Start of Project Container
   ProjectTitle: {
     position: "absolute",
     top: "2%",
@@ -338,50 +265,32 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: "20%",
     right: "45%",
-    
     alignItems: 'stretch',
     justifyContent: "space-evenly",
-    paddingTop: 70,
-    
+    paddingTop: 90,
+    paddingBottom: 50,
     width: "50%",
     height: "75%",
-
     backgroundColor: "transparent",
     borderColor: "#d7d9dd",
     borderStyle: "solid",
     borderWidth: 1,
-    borderRadius: 3,
-
-    // Soft drop shadow styling for mobile
-    boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.3)',
+    borderRadius: 3,    
+    boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.3)', // Soft drop shadow styling for mobile
     elevation: 2,      
-    
     flexShrink: 0,
     flexGrow: 0,
     minHeight: 500, // Ensures the container has a minimum height for better layout
     minWidth: 700,  // Ensures the container has a minimum width for better layout
-
   },
-  ProjectBox: {
-    width: "95%",
-    height: 60,
-    marginVertical: 10,
-    marginHorizontal: 10,
-    alignItems: 'center',
-    justifyContent: "center",
-
-    backgroundColor: "transparent",
-    borderColor: "#fdb515",
-    borderStyle: "solid",
-    borderRadius: 4,
-    borderWidth: 4,
-    // borderBottomWidth: 4,
-    // Apply borderRadius to the Card to give it round corners
-  },
+  // End of Project Container
 
 
 
-   tabBar: {
+
+
+  // Start of Tab bar For Project Container
+  tabBar: {
     position: "absolute",
     top: "5%",
     left: "25%",
@@ -408,11 +317,54 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     flex: 1,
+    margin: "26%",
     alignItems: 'center',
     justifyContent: "center",
     textAlign: 'center',
     marginTop: "28%",
     color: '#333',
     fontSize: 14,
-  }
+  },
+  // End of Tabs for Project Container
+  
+
+
+  
+  
+  CreateProjectButton: {
+    position: "absolute",
+    bottom: "0%",
+    right: "-0.2%",
+    width: "100.4%",
+    height: "8%",
+    backgroundColor: "transparent",
+    borderStyle: "solid",
+    borderWidth: 2,
+    borderRadius: 0,
+    borderTopColor: "#d7d9dd",
+    borderBottomColor: "transparent",
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    justifyContent: "center",
+    alignItems: "flex-start"
+  },
+  CreateProjectlinkButton: {
+    position: "relative",
+    left: "2%",
+    width: 110,
+    height: "100%",
+    backgroundColor: "transparent",
+    borderStyle: "solid",
+    borderWidth: 2,
+    borderRadius: 0,
+    borderColor: "transparent",
+    justifyContent: "center",
+    alignItems: "flex-start"
+  },
+  CreateProjectText: {
+    marginLeft: "1.5%",
+    fontSize: 15,
+    color: "#007aff",
+    fontWeight: '500', 
+  },
 });
