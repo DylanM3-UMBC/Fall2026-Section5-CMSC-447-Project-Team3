@@ -20,12 +20,13 @@ interface UserProfile {
 
 export default function onBoardingScreen() {
     const [showPreview, setShowPreview] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
+    const [message, setMessage] = useState("");
     const { email } = useLocalSearchParams() as {email: string}; 
     const { password } = useLocalSearchParams() as {password: string};
     const [name, setName] = useState("");
     const [username, setUsername] = useState("");
     const [profileImage, setProfileImage] = useState<string | null>(null);
+    const API_URL = 'http://127.0.0.1:5000/signup';
 
 
 
@@ -38,13 +39,51 @@ export default function onBoardingScreen() {
         profileimage: profileImage
     };
 
+const handleSubmitProfile = async () => {
+        if (!name || !email || !password) {
+        setMessage('Please fill out every field.');
+        return;
+        }
+
+        try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+            name,
+            email,
+            password,
+            }),
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            setMessage(result.error || 'Signup failed.');
+            return;
+        }
+
+        if (result.session) {
+            setMessage('Account created and signed in.');
+        } else {
+            setMessage('Account created. Check your email to confirm it.');
+        }
+
+
+        } catch (error) {
+            setMessage(`Could not connect to the backend: ${error}`);
+        }
+    }
+
 
     // This a helper function to help generate a json file you asked. This is only for testing purposes only
     const handleGenerateJson = () => {
         if (!name || !username) {
             //Alert.alert("Error", "Please fill in all fields to complete setup");
             setShowPreview(true);
-            setErrorMessage('Please fill in all fields to complete setup');
+            setMessage('Please fill in all fields to complete setup');
             return;
         }
 
@@ -173,7 +212,7 @@ export default function onBoardingScreen() {
                 <View style={styles.modalContainer}>
                 <View style={styles.modalContent}>
                     <Text style={styles.modalTitle}>Error</Text>
-                    <Text style={styles.descriptionInput}> {errorMessage} </Text>
+                    <Text style={styles.descriptionInput}> {message} </Text>
                     <View style={styles.modalButtons}>
                         <TouchableOpacity 
                             style={[styles.modalButton, styles.cancelButton]}

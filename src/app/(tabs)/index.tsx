@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { EmptyPlaceholder, FileCard, PickerWrapper, UploadedFile } from '../../components/pdfprojectItemComponent';
-
+import { EmptyPlaceholder, FileCard, PickerWrapper, UploadedFile } from '../../../components/pdfprojectItemComponent';
 
 
 
@@ -32,7 +31,7 @@ export default function Index() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}> 
         <Image 
-          source={require("../../assets/images/myumbclogo.png")} 
+          source={require("../../../assets/images/myumbclogo.png")} 
           style={styles.image} 
         />
         <Text style={styles.title}>UMBC Architectural/Engineering "Punch List" Project Dashboard</Text>
