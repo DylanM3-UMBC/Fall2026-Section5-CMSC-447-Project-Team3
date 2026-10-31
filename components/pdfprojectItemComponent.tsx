@@ -29,7 +29,7 @@ export function PickerWrapper({ onFilePicked, children }: { onFilePicked: (file:
   return <>{children(handleTapAndList)}</>;
 }
 
-export function FileCard({ item, onDelete }: { item: UploadedFile; onDelete: (id: string) => void }) {
+export function FileCard({ item, onDelete }: { item: UploadedFile; onDelete?: (id: string) => void }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -56,13 +56,13 @@ export function FileCard({ item, onDelete }: { item: UploadedFile; onDelete: (id
 
         <View style={styles.rightActions}>
           <Text style={styles.pdfBadge}>PDF</Text>
-          <TouchableOpacity style={styles.menuIconButton} onPress={() => setIsMenuOpen(!isMenuOpen)}>
+          {onDelete && <TouchableOpacity style={styles.menuIconButton} onPress={() => setIsMenuOpen(!isMenuOpen)}>
             <Text style={styles.menuIconText}>⋮</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>}
         </View>
       </View>
 
-      {isMenuOpen && (
+      {isMenuOpen && onDelete && (
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.actionButton} onPress={() => { console.log(`Shared: ${item.name}`); setIsMenuOpen(false); }}>
             <Text style={styles.shareText}>🔗 Share</Text>
