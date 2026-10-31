@@ -41,13 +41,16 @@ export async function authenticatedFetch(
 // The helper sends the token; the backend still needs to verify it.
 
 // Example: create a project inside an async screen handler.
-// This requires a POST /projects endpoint (not implemented yet).
+// selectedFile is the browser File returned by the PDF picker.
 //
 // try {
+//   const form = new FormData();
+//   form.append("project_name", selectedFile.name);
+//   form.append("project_desc", "");
+//   form.append("pdf", selectedFile);
 //   const response = await authenticatedFetch("/projects", {
 //     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({ project_name: "New project" }),
+//     body: form, // Let fetch set the multipart Content-Type.
 //   });
 //   if (!response.ok) throw new Error("Could not create project.");
 //   const data = await response.json();

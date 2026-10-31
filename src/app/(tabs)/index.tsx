@@ -1,9 +1,24 @@
-import { useState } from "react";
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import type { DocumentPickerAsset } from "expo-document-picker";
+import { authenticatedFetch } from "@/lib/api";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { EmptyPlaceholder, FileCard, PickerWrapper, UploadedFile } from '../../../components/pdfprojectItemComponent';
 import ProfileMenu from '../../../components/ProfileMenu';
 
+interface Project {
+  project_name: string;
+  pdf_url: string;
+}
+
+function toFileCard(project: Project): UploadedFile {
+  return {
+    id: project.pdf_url,
+    name: project.project_name,
+    uri: project.pdf_url,
+    uploadedAt: "",
+  };
+}
 
 
 export default function Index() { 
@@ -12,20 +27,66 @@ export default function Index() {
   This state is used to conditionally render the content of each tab.
   */ 
   const [activeTab, setActiveTab] = useState('Your Projects');
-  const [projTitle, setProjTitle] = useState("");
-  const [showPreview, setShowPreview] = useState(false)
-  const [selectedId, setSelectedId] = useState<string>();
-
-  
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
 
-  const addFile = (f: any) => setFiles((p) => [...p, {
-    id: Math.random().toString(36).substring(2, 9),
-    name: f.name || 'Unnamed PDF',
-    uri: f.uri,
-    size: f.size,
-    uploadedAt: new Date().toLocaleTimeString(),
-  }]);
+  const loadProjects = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await authenticatedFetch("/projects");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load projects.");
+      setFiles(data.projects.map(toFileCard));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not load projects.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadProjects();
+  }, []);
+
+  const addFile = async (file: DocumentPickerAsset) => {
+    if (uploading || loading) return;
+    setError("");
+    if (file.size && file.size > 10 * 1024 * 1024) {
+      setError("PDF must be 10 MB or smaller.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("project_name", file.name);
+      form.append("project_desc", "");
+      if (Platform.OS === "web") {
+        if (!file.file) throw new Error("Could not read the selected PDF. Please select it again.");
+        form.append("pdf", file.file, file.name);
+      } else {
+        // React Native accepts a file URI object for multipart uploads.
+        form.append("pdf", {
+          uri: file.uri,
+          name: file.name,
+          type: "application/pdf",
+        } as unknown as Blob);
+      }
+
+      const response = await authenticatedFetch("/projects", { method: "POST", body: form });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not create project.");
+      setFiles((previous) => [toFileCard(data.project), ...previous]);
+      setActiveTab("Your Projects");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not upload PDF.");
+    } finally {
+      setUploading(false);
+    }
+  };
  
   
   return (
@@ -79,20 +140,28 @@ export default function Index() {
         <PickerWrapper onFilePicked={addFile}>
           {(openPicker) => (
           <View style={styles.CreateProjectButton}>
-            <TouchableOpacity onPress={openPicker} style={styles.CreateProjectlinkButton}>
-              <Text style={styles.CreateProjectText}>Create Project</Text>
+            <TouchableOpacity disabled={uploading || loading} onPress={openPicker} style={styles.CreateProjectlinkButton}>
+              <Text style={styles.CreateProjectText}>{uploading ? "Uploading PDF…" : "Create Project"}</Text>
             </TouchableOpacity>
           </View>
           )}
         </PickerWrapper>
+        {error ? (
+          <View>
+            <Text accessibilityRole="alert" style={{ color: "#a32121" }}>{error}</Text>
+            <TouchableOpacity disabled={loading || uploading} onPress={loadProjects}>
+              <Text>Reload projects</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
         
         {activeTab === 'Your Projects' ? (
           /* Render your projects list view here */
           <FlatList
             data={files}
             keyExtractor={(item) => item.id}
-            ListEmptyComponent={<EmptyPlaceholder />}
-            renderItem={({ item }) => <FileCard item={item} onDelete={(id) => setFiles((p) => p.filter(x => x.id !== id))} />}
+            ListEmptyComponent={loading ? <Text>Loading projects…</Text> : error ? null : <EmptyPlaceholder />}
+            renderItem={({ item }) => <FileCard item={item} />}
           />  
         ) : (
           /* Render your shared projects list view here */
