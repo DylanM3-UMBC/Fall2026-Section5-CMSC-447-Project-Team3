@@ -1,8 +1,9 @@
-import { Platform } from "expo";
+import { Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { supabase, API_URL } from "@/lib/supabase";
 
 // Define the TypeScript interface for User profile for login only
 interface UserProfile {
@@ -25,50 +26,107 @@ export default function loginScreen() {
     };
 
 
-    // This a helper function to help generate a json file you asked. This is only for testing purposes only
-    const handleGenerateJson = () => {
-        if (!email || !password) {
-            //Alert.alert("Error", "Please fill in all fields");
+    const handleSignIn = async () => {
+        if (loading) return;
+
+        setErrorMessage("");
+        setShowPreview(false);
+
+        if (!email.trim() || !password) {
+            setErrorMessage("Enter your email and password.");
             setShowPreview(true);
-            setErrorMessage('Please fill in all fields');
             return;
         }
 
-        if (password.length < 8) {
-            //Alert.alert("Error", "Password must be at least 8 characters")
-            setShowPreview(true);
-            setErrorMessage('Password must be at least 8 characters');
-            return;
-        }
+        setLoading(true);
 
         try {
-            // Convert the TypeScript object into a clean, pretty-printed JSON string
-            const jsonString = JSON.stringify(dataToExport, null, 2);
+            const response = await fetch(`${API_URL}/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                email: email.trim(),
+                password,
+            }),
+            });
 
-            // Check if running on Web (Browser)
-            if (Platform.OS === 'web') {
-                // Create a temporary Blob containing your JSON data
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-        
-                // Create an invisible anchor link and programmatically click it to trigger the download
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'User_Login_for_backend_data.json'; // The physical file name generated on your computer
-                link.click();
-        
-                // Clean up memory
-                URL.revokeObjectURL(url);
-                console.log("JSON file generated and downloaded successfully!");
-            } 
-            else {
-                // If testing on a real phone or emulator, remind to switch to web mode
-                Alert.alert("Notice", "To generate a physical file on your computer, run this app in your web browser (Press 'w' in your terminal).");
+            const result = await response.json();
+
+            if (!response.ok) {
+            throw new Error(result.error || "Sign-in failed.");
             }
+
+            if (
+            !result.session?.access_token ||
+            !result.session?.refresh_token
+            ) {
+            throw new Error("The server did not return a session.");
+            }
+
+            const { data, error } = await supabase.auth.setSession({
+            access_token: result.session.access_token,
+            refresh_token: result.session.refresh_token,
+            });
+
+            if (error) throw error;
+            if (!data.session) throw new Error("Unable to save your session.");
+
+            setPassword("");
+            router.replace("/(tabs)");
         } catch (error) {
-            console.error("Failed to generate file:", error);
+            setErrorMessage(
+            error instanceof Error ? error.message : "Unable to sign in.",
+            );
+            setShowPreview(true);
+        } finally {
+            setLoading(false);
         }
     };
+
+    // This a helper function to help generate a json file you asked. This is only for testing purposes only
+    // const handleGenerateJson = () => {
+    //     if (!email || !password) {
+    //         //Alert.alert("Error", "Please fill in all fields");
+    //         setShowPreview(true);
+    //         setErrorMessage('Please fill in all fields');
+    //         return;
+    //     }
+
+    //     if (password.length < 8) {
+    //         //Alert.alert("Error", "Password must be at least 8 characters")
+    //         setShowPreview(true);
+    //         setErrorMessage('Password must be at least 8 characters');
+    //         return;
+    //     }
+
+    //     try {
+    //         // Convert the TypeScript object into a clean, pretty-printed JSON string
+    //         const jsonString = JSON.stringify(dataToExport, null, 2);
+
+    //         // Check if running on Web (Browser)
+    //         if (Platform.OS === 'web') {
+    //             // Create a temporary Blob containing your JSON data
+    //             const blob = new Blob([jsonString], { type: 'application/json' });
+    //             const url = URL.createObjectURL(blob);
+        
+    //             // Create an invisible anchor link and programmatically click it to trigger the download
+    //             const link = document.createElement('a');
+    //             link.href = url;
+    //             link.download = 'User_Login_for_backend_data.json'; // The physical file name generated on your computer
+    //             link.click();
+        
+    //             // Clean up memory
+    //             URL.revokeObjectURL(url);
+    //             console.log("JSON file generated and downloaded successfully!");
+    //         } 
+    //         else {
+    //             // If testing on a real phone or emulator, remind to switch to web mode
+    //             Alert.alert("Notice", "To generate a physical file on your computer, run this app in your web browser (Press 'w' in your terminal).");
+    //         }
+    //     } catch (error) {
+    //         console.error("Failed to generate file:", error);
+    //     }
+    // };
 
 
 
@@ -93,7 +151,8 @@ export default function loginScreen() {
                         style={styles.input}
                     />
                     <TextInput
-                        onChangeText={setPassword} 
+                        value={password}
+                        onChangeText={setPassword}
                         placeholder="Password..." 
                         placeholderTextColor={"#999"}
                         autoComplete="password"
@@ -102,8 +161,8 @@ export default function loginScreen() {
                         style={styles.input}
                     />
 
-                    <TouchableOpacity style={styles.button} onPress={handleGenerateJson} disabled={loading}>
-                        <Text style={styles.buttonText}>Sign In</Text>
+                    <TouchableOpacity style={styles.button} onPress={handleSignIn} disabled={loading}>
+                        <Text style={styles.buttonText}> {loading ? "Signing in…" : "Sign In"} </Text>
                     </TouchableOpacity> 
 
                     <TouchableOpacity style={styles.linkButton} onPress={() => router.push("/(auth)/signup")}>

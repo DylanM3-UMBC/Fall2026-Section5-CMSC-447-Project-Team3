@@ -4,6 +4,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Alert, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {API_URL} from "../../lib/supabase"
 
 
 
@@ -21,12 +22,12 @@ interface UserProfile {
 export default function onBoardingScreen() {
     const [showPreview, setShowPreview] = useState(false);
     const [message, setMessage] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
     const { email } = useLocalSearchParams() as {email: string}; 
     const { password } = useLocalSearchParams() as {password: string};
     const [name, setName] = useState("");
     const [username, setUsername] = useState("");
     const [profileImage, setProfileImage] = useState<string | null>(null);
-    const API_URL = 'http://127.0.0.1:5000/signup';
 
 
 
@@ -39,51 +40,51 @@ export default function onBoardingScreen() {
         profileimage: profileImage
     };
 
-const handleSubmitProfile = async () => {
+    const handleSubmitProfile = async () => {
+        setMessage("Creating account…");
         if (!name || !email || !password) {
-        setMessage('Please fill out every field.');
+        setErrorMessage('Please fill out every field.');
+        setShowPreview(true)
         return;
         }
 
         try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-            'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-            name,
-            email,
-            password,
-            }),
-        });
+            const [firstName, lastName] = name.split(' ');
+            const response = await fetch(`${API_URL}/signup`, {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                firstName,
+                lastName,
+                email,
+                password,
+                }),
+            });
         
-        const result = await response.json();
-        
-        if (!response.ok) {
-            setMessage(result.error || 'Signup failed.');
-            return;
-        }
-
-        if (result.session) {
-            setMessage('Account created and signed in.');
-        } else {
-            setMessage('Account created. Check your email to confirm it.');
-        }
-
-
+            const result = await response.json();
+            
+            if (!response.ok) {
+                setShowPreview(true)
+                setErrorMessage(result.error || 'Signup failed.');
+                return;
+            }
+            setMessage(result.message)
         } catch (error) {
-            setMessage(`Could not connect to the backend: ${error}`);
+            setShowPreview(true)
+            setErrorMessage(`Could not connect to the backend: ${error}`);
         }
     }
 
 
+    // no longer needed since we're sending to the db now
     // This a helper function to help generate a json file you asked. This is only for testing purposes only
     const handleGenerateJson = () => {
         if (!name || !username) {
             //Alert.alert("Error", "Please fill in all fields to complete setup");
             setShowPreview(true);
-            setMessage('Please fill in all fields to complete setup');
+            setErrorMessage('Please fill in all fields to complete setup');
             return;
         }
 
@@ -187,7 +188,6 @@ const handleSubmitProfile = async () => {
                         value={name}
                         onChangeText={setName}
                         autoCapitalize="words"
-                        
                     />
                     <TextInput 
                         style={styles.input}
@@ -199,9 +199,10 @@ const handleSubmitProfile = async () => {
                         autoComplete="username"
                     />
 
-                    <TouchableOpacity style={styles.button} onPress={handleGenerateJson}>
+                    <TouchableOpacity style={styles.button} onPress={handleSubmitProfile}>
                         <Text style={styles.buttonText}>Complete Setup</Text>
-                    </TouchableOpacity> 
+                    </TouchableOpacity>
+                    {message ? <Text>{message}</Text> : null}
                 </View>
             </View>
 
@@ -212,7 +213,7 @@ const handleSubmitProfile = async () => {
                 <View style={styles.modalContainer}>
                 <View style={styles.modalContent}>
                     <Text style={styles.modalTitle}>Error</Text>
-                    <Text style={styles.descriptionInput}> {message} </Text>
+                    <Text style={styles.descriptionInput}> {errorMessage} </Text>
                     <View style={styles.modalButtons}>
                         <TouchableOpacity 
                             style={[styles.modalButton, styles.cancelButton]}

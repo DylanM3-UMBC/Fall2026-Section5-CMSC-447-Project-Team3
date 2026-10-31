@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { EmptyPlaceholder, FileCard, PickerWrapper, UploadedFile } from '../../../components/pdfprojectItemComponent';
+import ProfileMenu from '../../../components/ProfileMenu';
 
 
 
@@ -34,7 +35,8 @@ export default function Index() {
           source={require("../../../assets/images/myumbclogo.png")} 
           style={styles.image} 
         />
-        <Text style={styles.title}>UMBC Architectural/Engineering "Punch List" Project Dashboard</Text>
+        <Text style={styles.title} numberOfLines={2}>UMBC Architectural/Engineering "Punch List" Project Dashboard</Text>
+        <ProfileMenu />
       </View>
       
       <View style={styles.SideBarBox}>
@@ -121,15 +123,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
   image: {
-    position: "absolute",
-    top: "0%",
-    left: "2%",
     width: 150,
+    maxWidth: "25%",
     height: "100%",
     resizeMode: 'center',
   },
   header: {
     flex: 0,
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    gap: 12,
     alignItems: 'center',
     justifyContent: "center",
    
@@ -144,6 +147,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 4,
   },
   title: {
+    flex: 1,
+    textAlign: "center",
     color: "#fbfbf8",
     fontSize: 24,
     fontWeight: "bold",
