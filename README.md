@@ -36,7 +36,7 @@ SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 ```bash
 source .venv/bin/activate
 python backend/manage.py migrate       # First run, or after Django migrations change
-python backend/manage.py runserver 127.0.0.1:5000
+python backend/manage.py runserver 127.0.0.1:8000
 ```
 
 Keep both terminals running while testing; press `Ctrl+C` in each to stop. These instructions target browser testing on the same computer. CORS is configured for frontend port **8081**.
