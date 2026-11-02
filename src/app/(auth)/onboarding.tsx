@@ -4,6 +4,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Alert, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {API_URL} from "../../lib/supabase"
 
 
 
@@ -20,6 +21,7 @@ interface UserProfile {
 
 export default function onBoardingScreen() {
     const [showPreview, setShowPreview] = useState(false);
+    const [message, setMessage] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
     const { email } = useLocalSearchParams() as {email: string}; 
     const { password } = useLocalSearchParams() as {password: string};
@@ -38,7 +40,45 @@ export default function onBoardingScreen() {
         profileimage: profileImage
     };
 
+    const handleSubmitProfile = async () => {
+        setMessage("Creating account…");
+        if (!name || !email || !password) {
+        setErrorMessage('Please fill out every field.');
+        setShowPreview(true)
+        return;
+        }
 
+        try {
+            const [firstName, lastName] = name.split(' ');
+            const response = await fetch(`${API_URL}/signup`, {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                firstName,
+                lastName,
+                email,
+                password,
+                }),
+            });
+        
+            const result = await response.json();
+            
+            if (!response.ok) {
+                setShowPreview(true)
+                setErrorMessage(result.error || 'Signup failed.');
+                return;
+            }
+            setMessage(result.message)
+        } catch (error) {
+            setShowPreview(true)
+            setErrorMessage(`Could not connect to the backend: ${error}`);
+        }
+    }
+
+
+    // no longer needed since we're sending to the db now
     // This a helper function to help generate a json file you asked. This is only for testing purposes only
     const handleGenerateJson = () => {
         if (!name || !username) {
@@ -148,7 +188,6 @@ export default function onBoardingScreen() {
                         value={name}
                         onChangeText={setName}
                         autoCapitalize="words"
-                        
                     />
                     <TextInput 
                         style={styles.input}
@@ -160,9 +199,10 @@ export default function onBoardingScreen() {
                         autoComplete="username"
                     />
 
-                    <TouchableOpacity style={styles.button} onPress={handleGenerateJson}>
+                    <TouchableOpacity style={styles.button} onPress={handleSubmitProfile}>
                         <Text style={styles.buttonText}>Complete Setup</Text>
-                    </TouchableOpacity> 
+                    </TouchableOpacity>
+                    {message ? <Text>{message}</Text> : null}
                 </View>
             </View>
 

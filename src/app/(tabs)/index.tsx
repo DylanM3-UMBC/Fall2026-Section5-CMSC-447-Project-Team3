@@ -1,9 +1,26 @@
-import { useState } from "react";
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { FlatList, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
+import type { DocumentPickerAsset } from "expo-document-picker";
+import { authenticatedFetch } from "@/lib/api";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { EmptyPlaceholder, FileCard, PickerWrapper, UploadedFile } from '../../components/pdfprojectItemComponent';
+import { EmptyPlaceholder, FileCard, UploadedFile } from '../../../components/pdfprojectItemComponent';
+import ProfileMenu from '../../../components/ProfileMenu';
+import { MAX_FILE_SIZE } from "@/lib/supabase";
 
+interface Project {
+  project_name: string;
+  pdf_url: string;
+}
 
+function toFileCard(project: Project): UploadedFile {
+  return {
+    id: project.pdf_url,
+    name: project.project_name,
+    uri: project.pdf_url,
+    uploadedAt: "",
+  };
+}
 
 
 export default function Index() { 
@@ -12,30 +29,118 @@ export default function Index() {
   This state is used to conditionally render the content of each tab.
   */ 
   const [activeTab, setActiveTab] = useState('Your Projects');
-  const [projTitle, setProjTitle] = useState("");
-  const [showPreview, setShowPreview] = useState(false)
-  const [selectedId, setSelectedId] = useState<string>();
-
-  
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [pdf, setPdf] = useState<DocumentPickerAsset | null>(null);
+  const [projectName, setProjectName] = useState("");
+  const [description, setDescription] = useState("");
+  const [formError, setFormError] = useState("");
 
-  const addFile = (f: any) => setFiles((p) => [...p, {
-    id: Math.random().toString(36).substring(2, 9),
-    name: f.name || 'Unnamed PDF',
-    uri: f.uri,
-    size: f.size,
-    uploadedAt: new Date().toLocaleTimeString(),
-  }]);
+  const resetForm = () => {
+    setPdf(null);
+    setProjectName("");
+    setDescription("");
+    setFormError("");
+  };
+
+  const closeCreate = () => {
+    if (uploading) return;
+    setShowCreate(false);
+    resetForm();
+  };
+
+  const pickPdf = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "application/pdf",
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const selected = result.assets[0];
+      if (selected.size && selected.size > MAX_FILE_SIZE) {
+        setFormError("PDF must be 10 MB or smaller.");
+        return;
+      }
+      setPdf(selected);
+      setProjectName(selected.name);
+      setFormError("");
+    } catch {
+      setFormError("Could not open the file picker. Please try again.");
+    }
+  };
+
+  const loadProjects = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await authenticatedFetch("/projects");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load projects.");
+      setFiles(data.projects.map(toFileCard));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not load projects.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadProjects();
+  }, []);
+
+  const createProject = async () => {
+    if (uploading || loading) return;
+    setFormError("");
+    if (!pdf || !projectName.trim()) {
+      setFormError("Floor Plan PDF and Project Name are required.");
+      return;
+    }
+    const file = pdf;
+
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("project_name", projectName.trim());
+      form.append("project_desc", description.trim());
+      if (Platform.OS === "web") {
+        if (!file.file) throw new Error("Could not read the selected PDF. Please select it again.");
+        form.append("pdf", file.file, file.name);
+      } else {
+        // React Native accepts a file URI object for multipart uploads.
+        form.append("pdf", {
+          uri: file.uri,
+          name: file.name,
+          type: "application/pdf",
+        } as unknown as Blob);
+      }
+
+      const response = await authenticatedFetch("/projects", { method: "POST", body: form });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not create project.");
+      setFiles((previous) => [toFileCard(data.project), ...previous]);
+      setActiveTab("Your Projects");
+      setShowCreate(false);
+      resetForm();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Could not upload PDF.");
+    } finally {
+      setUploading(false);
+    }
+  };
  
   
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}> 
         <Image 
-          source={require("../../assets/images/myumbclogo.png")} 
+          source={require("../../../assets/images/myumbclogo.png")} 
           style={styles.image} 
         />
-        <Text style={styles.title}>UMBC Architectural/Engineering "Punch List" Project Dashboard</Text>
+        <Text style={styles.title} numberOfLines={2}>UMBC Architectural/Engineering "Punch List" Project Dashboard</Text>
+        <ProfileMenu />
       </View>
       
       <View style={styles.SideBarBox}>
@@ -75,29 +180,63 @@ export default function Index() {
           </TouchableOpacity>
         </View>
 
-        <PickerWrapper onFilePicked={addFile}>
-          {(openPicker) => (
           <View style={styles.CreateProjectButton}>
-            <TouchableOpacity onPress={openPicker} style={styles.CreateProjectlinkButton}>
+            <TouchableOpacity disabled={uploading || loading} onPress={() => { resetForm(); setShowCreate(true); }} style={styles.CreateProjectlinkButton}>
               <Text style={styles.CreateProjectText}>Create Project</Text>
             </TouchableOpacity>
           </View>
-          )}
-        </PickerWrapper>
+        {error ? (
+          <View>
+            <Text accessibilityRole="alert" style={{ color: "#a32121" }}>{error}</Text>
+            <TouchableOpacity disabled={loading || uploading} onPress={loadProjects}>
+              <Text>Reload projects</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
         
         {activeTab === 'Your Projects' ? (
           /* Render your projects list view here */
           <FlatList
             data={files}
             keyExtractor={(item) => item.id}
-            ListEmptyComponent={<EmptyPlaceholder />}
-            renderItem={({ item }) => <FileCard item={item} onDelete={(id) => setFiles((p) => p.filter(x => x.id !== id))} />}
+            ListEmptyComponent={loading ? <Text>Loading projects…</Text> : error ? null : <EmptyPlaceholder />}
+            renderItem={({ item }) => <FileCard item={item} />}
           />  
         ) : (
           /* Render your shared projects list view here */
           <Text style={styles.placeholderText}>No Shared Projects...</Text>
         )}  
       </View>
+      <Modal visible={showCreate} transparent animationType="fade" onRequestClose={closeCreate}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.createModal} accessibilityViewIsModal>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.formContent}>
+              <Text style={styles.formTitle}>Create Project</Text>
+              <Text style={styles.fieldLabel}>Floor Plan PDF *</Text>
+              <TouchableOpacity accessibilityRole="button" disabled={uploading} onPress={pickPdf} style={styles.pdfPicker}>
+                <Text>{pdf ? pdf.name : "Choose PDF"}</Text>
+              </TouchableOpacity>
+              <Text style={styles.fieldHint}>PDF only, up to 10 MB. Click to choose or replace.</Text>
+
+              <Text style={styles.fieldLabel}>Project Name *</Text>
+              <TextInput accessibilityLabel="Project Name, required" style={styles.formInput} value={projectName} onChangeText={setProjectName} editable={!uploading} placeholder="Enter project name" />
+
+              <Text style={styles.fieldLabel}>Project Description</Text>
+              <TextInput accessibilityLabel="Project Description" style={[styles.formInput, styles.descriptionInput]} value={description} onChangeText={setDescription} editable={!uploading} placeholder="Describe the project (optional)" multiline textAlignVertical="top" />
+              {formError ? <Text accessibilityRole="alert" style={styles.formError}>{formError}</Text> : null}
+
+              <View style={styles.formActions}>
+                <TouchableOpacity accessibilityRole="button" disabled={uploading} onPress={closeCreate} style={[styles.formButton, uploading && styles.disabledButton]}>
+                  <Text>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity accessibilityRole="button" disabled={uploading || !pdf || !projectName.trim()} onPress={createProject} style={[styles.formButton, styles.submitButton, (uploading || !pdf || !projectName.trim()) && styles.disabledButton]}>
+                  <Text style={{ fontWeight: "600" }}>{uploading ? "Creating…" : "Submit"}</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -113,6 +252,20 @@ export default function Index() {
 
 
 const styles = StyleSheet.create({
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center", padding: 24 },
+  createModal: { width: 520, maxWidth: "100%", maxHeight: "90%", borderRadius: 12, backgroundColor: "#fff" },
+  formContent: { padding: 24 },
+  formTitle: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
+  fieldLabel: { fontSize: 15, fontWeight: "600", marginBottom: 8, marginTop: 12 },
+  pdfPicker: { padding: 14, borderWidth: 1, borderColor: "#aaa", borderStyle: "dashed", borderRadius: 6 },
+  fieldHint: { color: "#666", fontSize: 12, marginTop: 6 },
+  formInput: { borderWidth: 1, borderColor: "#aaa", borderRadius: 6, padding: 12, fontSize: 16, color: "#222" },
+  descriptionInput: { minHeight: 110 },
+  formError: { color: "#a32121", marginTop: 12 },
+  formActions: { flexDirection: "row", justifyContent: "flex-end", gap: 12, marginTop: 24 },
+  formButton: { paddingHorizontal: 22, paddingVertical: 12, borderRadius: 6, backgroundColor: "#eee" },
+  submitButton: { backgroundColor: "#fdb515" },
+  disabledButton: { opacity: 0.5 },
   container: {
     flex: 1,
     flexWrap: "wrap",
@@ -122,15 +275,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
   image: {
-    position: "absolute",
-    top: "0%",
-    left: "2%",
     width: 150,
+    maxWidth: "25%",
     height: "100%",
     resizeMode: 'center',
   },
   header: {
     flex: 0,
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    gap: 12,
     alignItems: 'center',
     justifyContent: "center",
    
@@ -145,6 +299,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 4,
   },
   title: {
+    flex: 1,
+    textAlign: "center",
     color: "#fbfbf8",
     fontSize: 24,
     fontWeight: "bold",
