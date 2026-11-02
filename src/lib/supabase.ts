@@ -16,4 +16,5 @@ export const supabase = createClient(
   },
 );
 
-export const API_URL = 'http://127.0.0.1:5000';
+export const API_URL = 'http://127.0.0.1:8000';
+export const MAX_FILE_SIZE = 10 * 1024 * 1024;
