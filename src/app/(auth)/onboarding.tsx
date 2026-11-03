@@ -1,14 +1,84 @@
+import * as DocumentPicker from 'expo-document-picker';
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { API_URL } from "../../lib/supabase";
+
+
+
+// Define the TypeScript interface for User profile for login only
+interface UserProfile {
+    email: string;
+    password: string;
+    name: string;
+    username: string;
+    profileimage: string | null;
+}
+
+
 
 export default function onBoardingScreen() {
+    const [showPreview, setShowPreview] = useState(false);
+    const [message, setMessage] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
+    const { email } = useLocalSearchParams() as {email: string}; 
+    const { password } = useLocalSearchParams() as {password: string};
     const [name, setName] = useState("");
     const [username, setUsername] = useState("");
     const [profileImage, setProfileImage] = useState<string | null>(null);
 
+
+
+    // This here is how actual data gets passed to be verified
+    const dataToExport: UserProfile = {
+        email: email,
+        password: password,
+        name: name,
+        username: username,
+        profileimage: profileImage
+    };
+
+    const handleSubmitProfile = async () => {
+        setMessage("Creating account…");
+        if (!name || !email || !password) {
+        setErrorMessage('Please fill out every field.');
+        setShowPreview(true)
+        return;
+        }
+
+        try {
+            const [firstName, lastName] = name.split(' ');
+            const response = await fetch(`${API_URL}/signup`, {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                firstName,
+                lastName,
+                email,
+                password,
+                }),
+            });
+        
+            const result = await response.json();
+            
+            if (!response.ok) {
+                setShowPreview(true)
+                setErrorMessage(result.error || 'Signup failed.');
+                return;
+            }
+            setMessage(result.message)
+        } catch (error) {
+            setShowPreview(true)
+            setErrorMessage(`Could not connect to the backend: ${error}`);
+        }
+    }
+
+    
     const pickImage = async () => {
         const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (status !== "granted") {
@@ -40,14 +110,31 @@ export default function onBoardingScreen() {
             setProfileImage(result.assets[0].uri);
         }
     }
-    const showImagePicker = () => {
-        Alert.alert("Select Profile Image", "Choose an option",[
-            {text: "Camera", onPress: takePhoto },
-            {text: "Photo Library", onPress: pickImage},
-            {text: "Cancel", style: "cancel"}
-        ]);
+    const showImagePicker = async () => {
+        if(Platform.OS === 'web'){
+            try {
+                const result = await DocumentPicker.getDocumentAsync({
+                    type: ['image/png', 'image/jpeg'],
+                });
+                if (!result.canceled && result.assets[0]) {
+                    setProfileImage(result.assets[0].uri);
+                }
+                return;
+            
+            } catch (error) {
+                console.log('Error opening file picker');
+                return;
+            }
+        }
+        if(Platform.OS === 'android' || Platform.OS === 'ios'){   
+            Alert.alert("Select Profile Image", "Choose an option",[
+                {text: "Camera", onPress: takePhoto },
+                {text: "Photo Library", onPress: pickImage},
+                {text: "Cancel", style: "cancel"}
+            ]);
+        }
     }
-    const handleComplete = () => {}
+    
 
     return (
         <SafeAreaView edges={["top", "bottom", "right", "left"]} style={styles.container}>
@@ -77,7 +164,6 @@ export default function onBoardingScreen() {
                         value={name}
                         onChangeText={setName}
                         autoCapitalize="words"
-                        
                     />
                     <TextInput 
                         style={styles.input}
@@ -89,11 +175,35 @@ export default function onBoardingScreen() {
                         autoComplete="username"
                     />
 
-                    <TouchableOpacity style={styles.button} onPress={handleComplete}>
+                    <TouchableOpacity style={styles.button} onPress={handleSubmitProfile}>
                         <Text style={styles.buttonText}>Complete Setup</Text>
-                    </TouchableOpacity> 
+                    </TouchableOpacity>
+                    {message ? <Text>{message}</Text> : null}
                 </View>
             </View>
+
+
+
+
+            <Modal visible={showPreview} transparent animationType="fade">
+                <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Error</Text>
+                    <Text style={styles.descriptionInput}> {errorMessage} </Text>
+                    <View style={styles.modalButtons}>
+                        <TouchableOpacity 
+                            style={[styles.modalButton, styles.cancelButton]}
+                            onPress={() => {
+                            setShowPreview(false);
+                            }}
+                        >
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+                </View>
+            </Modal>
+
         </SafeAreaView>
     );
 }
@@ -205,4 +315,61 @@ const styles = StyleSheet.create({
         fontWeight: 600,
         color: "#000",
     },
+
+
+
+
+      
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 16,
+    textAlign: "center",
+    color: "#f63c3c",
+  },
+  descriptionInput: {
+    width: "100%",
+    minHeight: 40,
+    maxHeight: 120,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    color: "#000",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#ff0000",
+  },
+  cancelButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 })

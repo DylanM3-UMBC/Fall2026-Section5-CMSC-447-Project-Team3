@@ -2,30 +2,50 @@
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Get started
+## To start the frontend
 
-1. Install dependencies
+From the repository root, use Node.js 22.13 or newer:
 
-   ```bash
-   npm install
-   ```
+```bash
+npm install                     # First run, or after dependencies change
+npm run web -- --port 8081
+```
 
-2. Start the app
+Open http://localhost:8081 in your browser, or http://localhost:8081/signup to test signup. Frontend screens live in `src/app/`.
 
-   ```bash
-   npx expo start
-   ```
+## To start the backend
 
-In the output, you'll find options to open the app in a
+#### first-time setup
+In a second terminal, start from the repository root. Set up Python dependencies **once**:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install django django-cors-headers python-dotenv supabase
+```
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Create a `.env` file in the **repository root** (beside `package.json`, not inside `backend/`) with your Supabase project values:
 
-## Get a fresh project
+```dotenv
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+```
+
+#### Start Django on port **5000**, matching the frontend signup URL:
+
+```bash
+source .venv/bin/activate
+python backend/manage.py migrate       # First run, or after Django migrations change
+python backend/manage.py runserver 127.0.0.1:5000
+```
+
+Keep both terminals running while testing; press `Ctrl+C` in each to stop. These instructions target browser testing on the same computer. CORS is configured for frontend port **8081**.
+
+For signup testing, the Supabase profile-creation trigger must be installed, and `http://localhost:8081/login` must be allowed under **Authentication → URL Configuration → Redirect URLs**. Django migrations initialize its local SQLite tables; they do not install the Supabase trigger.
+
+## Additional information
+
+### Get a fresh project
 
 When you're ready, run:
 
