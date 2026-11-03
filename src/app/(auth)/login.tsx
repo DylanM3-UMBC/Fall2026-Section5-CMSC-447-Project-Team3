@@ -1,7 +1,14 @@
+<<<<<<< HEAD
+import { API_URL, supabase } from "@/lib/supabase";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+=======
 import { Platform } from "expo";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Define the TypeScript interface for User profile for login only
@@ -25,6 +32,62 @@ export default function loginScreen() {
     };
 
 
+<<<<<<< HEAD
+    const handleSignIn = async () => {
+        if (loading) return;
+
+        setErrorMessage("");
+        setShowPreview(false);
+
+        if (!email.trim() || !password) {
+            setErrorMessage("Enter your email and password.");
+            setShowPreview(true);
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const response = await fetch(`${API_URL}/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                email: email.trim(),
+                password,
+            }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+            throw new Error(result.error || "Sign-in failed.");
+            }
+
+            if (
+            !result.session?.access_token ||
+            !result.session?.refresh_token
+            ) {
+            throw new Error("The server did not return a session.");
+            }
+
+            const { data, error } = await supabase.auth.setSession({
+            access_token: result.session.access_token,
+            refresh_token: result.session.refresh_token,
+            });
+
+            if (error) throw error;
+            if (!data.session) throw new Error("Unable to save your session.");
+
+            setPassword("");
+            router.replace("/(tabs)");
+        } catch (error) {
+            setErrorMessage(
+            error instanceof Error ? error.message : "Unable to sign in.",
+            );
+            setShowPreview(true);
+        } finally {
+            setLoading(false);
+=======
     // This a helper function to help generate a json file you asked. This is only for testing purposes only
     const handleGenerateJson = () => {
         if (!email || !password) {
@@ -67,16 +130,20 @@ export default function loginScreen() {
             }
         } catch (error) {
             console.error("Failed to generate file:", error);
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
         }
     };
 
 
+<<<<<<< HEAD
+=======
 
 
 
 
 
 
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
     return (
         <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
             <View style={styles.content}>
@@ -93,7 +160,12 @@ export default function loginScreen() {
                         style={styles.input}
                     />
                     <TextInput
+<<<<<<< HEAD
+                        value={password}
+                        onChangeText={setPassword}
+=======
                         onChangeText={setPassword} 
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
                         placeholder="Password..." 
                         placeholderTextColor={"#999"}
                         autoComplete="password"
@@ -102,8 +174,13 @@ export default function loginScreen() {
                         style={styles.input}
                     />
 
+<<<<<<< HEAD
+                    <TouchableOpacity style={styles.button} onPress={handleSignIn} disabled={loading}>
+                        <Text style={styles.buttonText}> {loading ? "Signing in…" : "Sign In"} </Text>
+=======
                     <TouchableOpacity style={styles.button} onPress={handleGenerateJson} disabled={loading}>
                         <Text style={styles.buttonText}>Sign In</Text>
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
                     </TouchableOpacity> 
 
                     <TouchableOpacity style={styles.linkButton} onPress={() => router.push("/(auth)/signup")}>
@@ -254,4 +331,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+<<<<<<< HEAD
 })
+=======
+})
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3

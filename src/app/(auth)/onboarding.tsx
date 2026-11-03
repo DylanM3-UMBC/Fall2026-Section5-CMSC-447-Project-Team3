@@ -1,9 +1,24 @@
+import * as DocumentPicker from 'expo-document-picker';
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Alert, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { API_URL } from "../../lib/supabase";
+
+
+
+// Define the TypeScript interface for User profile for login only
+interface UserProfile {
+    email: string;
+    password: string;
+    name: string;
+    username: string;
+    profileimage: string | null;
+}
+
+
 
 
 
@@ -20,6 +35,10 @@ interface UserProfile {
 
 export default function onBoardingScreen() {
     const [showPreview, setShowPreview] = useState(false);
+<<<<<<< HEAD
+    const [message, setMessage] = useState("");
+=======
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
     const [errorMessage, setErrorMessage] = useState("");
     const { email } = useLocalSearchParams() as {email: string}; 
     const { password } = useLocalSearchParams() as {password: string};
@@ -38,6 +57,46 @@ export default function onBoardingScreen() {
         profileimage: profileImage
     };
 
+<<<<<<< HEAD
+    const handleSubmitProfile = async () => {
+        setMessage("Creating account…");
+        if (!name || !email || !password) {
+        setErrorMessage('Please fill out every field.');
+        setShowPreview(true)
+        return;
+        }
+
+        try {
+            const [firstName, lastName] = name.split(' ');
+            const response = await fetch(`${API_URL}/signup`, {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                firstName,
+                lastName,
+                email,
+                password,
+                }),
+            });
+        
+            const result = await response.json();
+            
+            if (!response.ok) {
+                setShowPreview(true)
+                setErrorMessage(result.error || 'Signup failed.');
+                return;
+            }
+            setMessage(result.message)
+        } catch (error) {
+            setShowPreview(true)
+            setErrorMessage(`Could not connect to the backend: ${error}`);
+        }
+    }
+
+    
+=======
 
     // This a helper function to help generate a json file you asked. This is only for testing purposes only
     const handleGenerateJson = () => {
@@ -80,6 +139,7 @@ export default function onBoardingScreen() {
 
 
 
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
     const pickImage = async () => {
         const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (status !== "granted") {
@@ -111,14 +171,31 @@ export default function onBoardingScreen() {
             setProfileImage(result.assets[0].uri);
         }
     }
-    const showImagePicker = () => {
-        Alert.alert("Select Profile Image", "Choose an option",[
-            {text: "Camera", onPress: takePhoto },
-            {text: "Photo Library", onPress: pickImage},
-            {text: "Cancel", style: "cancel"}
-        ]);
+    const showImagePicker = async () => {
+        if(Platform.OS === 'web'){
+            try {
+                const result = await DocumentPicker.getDocumentAsync({
+                    type: ['image/png', 'image/jpeg'],
+                });
+                if (!result.canceled && result.assets[0]) {
+                    setProfileImage(result.assets[0].uri);
+                }
+                return;
+            
+            } catch (error) {
+                console.log('Error opening file picker');
+                return;
+            }
+        }
+        if(Platform.OS === 'android' || Platform.OS === 'ios'){   
+            Alert.alert("Select Profile Image", "Choose an option",[
+                {text: "Camera", onPress: takePhoto },
+                {text: "Photo Library", onPress: pickImage},
+                {text: "Cancel", style: "cancel"}
+            ]);
+        }
     }
-    const handleComplete = () => {}
+    
 
     return (
         <SafeAreaView edges={["top", "bottom", "right", "left"]} style={styles.container}>
@@ -148,7 +225,6 @@ export default function onBoardingScreen() {
                         value={name}
                         onChangeText={setName}
                         autoCapitalize="words"
-                        
                     />
                     <TextInput 
                         style={styles.input}
@@ -160,9 +236,14 @@ export default function onBoardingScreen() {
                         autoComplete="username"
                     />
 
+<<<<<<< HEAD
+                    <TouchableOpacity style={styles.button} onPress={handleSubmitProfile}>
+=======
                     <TouchableOpacity style={styles.button} onPress={handleGenerateJson}>
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
                         <Text style={styles.buttonText}>Complete Setup</Text>
-                    </TouchableOpacity> 
+                    </TouchableOpacity>
+                    {message ? <Text>{message}</Text> : null}
                 </View>
             </View>
 
@@ -356,4 +437,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+<<<<<<< HEAD
 })
+=======
+})
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
