@@ -6,13 +6,14 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, FlatList, Image, ImageStyle, Platform, ScrollView, StyleSheet, Text, TextStyle, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { EmptyPlaceholder, FileCard, PickerWrapper, UploadedFile } from '../../../components/pdfprojectItemComponent';
+import ProfileMenu from '../../../components/ProfileMenu';
 
 interface DashboardStyles {
   screenContainer: ViewStyle;
   stickyHeaderWrapper: ViewStyle;
   topNavbar: ViewStyle;
   innerNavbar: ViewStyle;
-  navLogo: TextStyle;
+  navLogo: ImageStyle;
   mainScroll: ViewStyle;
   scrollContent: ViewStyle;
   centerLayoutWrapper: ViewStyle;
@@ -160,8 +161,15 @@ export default function Index() {
           <View style={styles.stickyHeaderWrapper}>
             <View style={styles.topNavbar}>
               <View style={styles.innerNavbar}>
-                <Text style={styles.navLogo}>myUMBC</Text>
+                <Image 
+                  source={require("../../../assets/images/myumbclogo.png")} 
+                  style={styles.navLogo} 
+                />
+                <View style={{ position: 'absolute', right: -150 }}>
+                  <ProfileMenu />
+                </View>
               </View>
+
             </View>
           </View>
 
@@ -338,9 +346,11 @@ const createStyles = (width: number): DashboardStyles => {
       borderRadius: 8,
     },
     navLogo: {
-      color: '#fff',
-      fontSize: 20,
-      fontWeight: 'bold',
+      position: 'absolute',
+      left: -500,
+      width: "100%",
+      height: 50,
+      resizeMode: 'contain',
     },
     mainScroll: {
       flex: 1,
