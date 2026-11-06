@@ -1,7 +1,7 @@
-import { supabase } from "@/lib/supabase";
-import type { Session } from "@supabase/supabase-js";
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 import { ActivityIndicator, AppState, Platform, StyleSheet, View } from "react-native";
 
 export default function RootLayout() {
