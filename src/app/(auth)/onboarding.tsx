@@ -20,9 +20,25 @@ interface UserProfile {
 
 
 
+
+
+// Define the TypeScript interface for User profile for login only
+interface UserProfile {
+    email: string;
+    password: string;
+    name: string;
+    username: string;
+    profileimage: string | null;
+}
+
+
+
 export default function onBoardingScreen() {
     const [showPreview, setShowPreview] = useState(false);
+<<<<<<< HEAD
     const [message, setMessage] = useState("");
+=======
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
     const [errorMessage, setErrorMessage] = useState("");
     const { email } = useLocalSearchParams() as {email: string}; 
     const { password } = useLocalSearchParams() as {password: string};
@@ -41,6 +57,7 @@ export default function onBoardingScreen() {
         profileimage: profileImage
     };
 
+<<<<<<< HEAD
     const handleSubmitProfile = async () => {
         setMessage("Creating account…");
         if (!name || !email || !password) {
@@ -79,6 +96,50 @@ export default function onBoardingScreen() {
     }
 
     
+=======
+
+    // This a helper function to help generate a json file you asked. This is only for testing purposes only
+    const handleGenerateJson = () => {
+        if (!name || !username) {
+            //Alert.alert("Error", "Please fill in all fields to complete setup");
+            setShowPreview(true);
+            setErrorMessage('Please fill in all fields to complete setup');
+            return;
+        }
+
+        try {
+            // Convert the TypeScript object into a clean, pretty-printed JSON string
+            const jsonString = JSON.stringify(dataToExport, null, 2);
+
+            // Check if running on Web (Browser)
+            if (Platform.OS === 'web') {
+                // Create a temporary Blob containing your JSON data
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+        
+                // Create an invisible anchor link and programmatically click it to trigger the download
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'Created_User_Profile_for_backend_data.json'; // The physical file name generated on your computer
+                link.click();
+        
+                // Clean up memory
+                URL.revokeObjectURL(url);
+                console.log("JSON file generated and downloaded successfully!");
+            } 
+            else {
+                // If testing on a real phone or emulator, remind to switch to web mode
+                Alert.alert("Notice", "To generate a physical file on your computer, run this app in your web browser (Press 'w' in your terminal).");
+            }
+        } catch (error) {
+            console.error("Failed to generate file:", error);
+        }
+    };
+
+
+
+
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
     const pickImage = async () => {
         const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (status !== "granted") {
@@ -175,7 +236,11 @@ export default function onBoardingScreen() {
                         autoComplete="username"
                     />
 
+<<<<<<< HEAD
                     <TouchableOpacity style={styles.button} onPress={handleSubmitProfile}>
+=======
+                    <TouchableOpacity style={styles.button} onPress={handleGenerateJson}>
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
                         <Text style={styles.buttonText}>Complete Setup</Text>
                     </TouchableOpacity>
                     {message ? <Text>{message}</Text> : null}
@@ -372,4 +437,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+<<<<<<< HEAD
 })
+=======
+})
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3

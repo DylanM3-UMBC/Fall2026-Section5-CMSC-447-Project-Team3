@@ -1,7 +1,14 @@
+<<<<<<< HEAD
 import { API_URL, supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+=======
+import { Platform } from "expo";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Define the TypeScript interface for User profile for login only
@@ -25,6 +32,7 @@ export default function loginScreen() {
     };
 
 
+<<<<<<< HEAD
     const handleSignIn = async () => {
         if (loading) return;
 
@@ -79,10 +87,63 @@ export default function loginScreen() {
             setShowPreview(true);
         } finally {
             setLoading(false);
+=======
+    // This a helper function to help generate a json file you asked. This is only for testing purposes only
+    const handleGenerateJson = () => {
+        if (!email || !password) {
+            //Alert.alert("Error", "Please fill in all fields");
+            setShowPreview(true);
+            setErrorMessage('Please fill in all fields');
+            return;
+        }
+
+        if (password.length < 8) {
+            //Alert.alert("Error", "Password must be at least 8 characters")
+            setShowPreview(true);
+            setErrorMessage('Password must be at least 8 characters');
+            return;
+        }
+
+        try {
+            // Convert the TypeScript object into a clean, pretty-printed JSON string
+            const jsonString = JSON.stringify(dataToExport, null, 2);
+
+            // Check if running on Web (Browser)
+            if (Platform.OS === 'web') {
+                // Create a temporary Blob containing your JSON data
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+        
+                // Create an invisible anchor link and programmatically click it to trigger the download
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'User_Login_for_backend_data.json'; // The physical file name generated on your computer
+                link.click();
+        
+                // Clean up memory
+                URL.revokeObjectURL(url);
+                console.log("JSON file generated and downloaded successfully!");
+            } 
+            else {
+                // If testing on a real phone or emulator, remind to switch to web mode
+                Alert.alert("Notice", "To generate a physical file on your computer, run this app in your web browser (Press 'w' in your terminal).");
+            }
+        } catch (error) {
+            console.error("Failed to generate file:", error);
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
         }
     };
 
 
+<<<<<<< HEAD
+=======
+
+
+
+
+
+
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
     return (
         <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
             <View style={styles.content}>
@@ -99,8 +160,12 @@ export default function loginScreen() {
                         style={styles.input}
                     />
                     <TextInput
+<<<<<<< HEAD
                         value={password}
                         onChangeText={setPassword}
+=======
+                        onChangeText={setPassword} 
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
                         placeholder="Password..." 
                         placeholderTextColor={"#999"}
                         autoComplete="password"
@@ -109,8 +174,13 @@ export default function loginScreen() {
                         style={styles.input}
                     />
 
+<<<<<<< HEAD
                     <TouchableOpacity style={styles.button} onPress={handleSignIn} disabled={loading}>
                         <Text style={styles.buttonText}> {loading ? "Signing in…" : "Sign In"} </Text>
+=======
+                    <TouchableOpacity style={styles.button} onPress={handleGenerateJson} disabled={loading}>
+                        <Text style={styles.buttonText}>Sign In</Text>
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
                     </TouchableOpacity> 
 
                     <TouchableOpacity style={styles.linkButton} onPress={() => router.push("/(auth)/signup")}>
@@ -261,4 +331,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+<<<<<<< HEAD
 })
+=======
+})
+>>>>>>> 53188e76662c6bd9b3591a4a32cc79ddcb01e4d3
