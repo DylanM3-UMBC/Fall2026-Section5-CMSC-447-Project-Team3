@@ -1,53 +1,63 @@
-import { supabase } from "@/lib/supabase";
-import type { User } from "@supabase/supabase-js";
-import * as DocumentPicker from 'expo-document-picker';
-import * as ImagePicker from "expo-image-picker";
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, Image, ImageStyle, Platform, ScrollView, StyleSheet, Text, TextStyle, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
-import { EmptyPlaceholder, FileCard, PickerWrapper, UploadedFile } from '../../../components/pdfprojectItemComponent';
+import { Image, ImageStyle, ScrollView, StyleSheet, Text, TextStyle, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
+import { showImagePicker } from '../../../components/imageProfilePicker';
+import WeeklyTaskChart from '../../../components/weeklyTaskChart';
 
 interface DashboardStyles {
   screenContainer: ViewStyle;
   stickyHeaderWrapper: ViewStyle;
   topNavbar: ViewStyle;
   innerNavbar: ViewStyle;
-  navLogo: TextStyle;
   mainScroll: ViewStyle;
   scrollContent: ViewStyle;
   centerLayoutWrapper: ViewStyle;
   heroSection: ViewStyle;
-  profileName: TextStyle;
   gridRow: ViewStyle;
   leftProjectColumn: ViewStyle;
   rightGroupsColumn: ViewStyle;
   sidebarContainer: ViewStyle;
-  sectionTitleProjects: TextStyle
-  sectionTitle: TextStyle;
   groupCardItem: ViewStyle;
   TaskSummaryButton: ViewStyle
-  TaskSummaryText: TextStyle
-  groupCardText: TextStyle;
-  profileBannerImage: ImageStyle
+  profilebannerBox: ViewStyle
   scrollBoxWrapper: ViewStyle
   tabBar: ViewStyle
   tabButton: ViewStyle
   activeTabButton: ViewStyle
+  createProjectButton: ViewStyle;
+  imageContainer: ViewStyle;
+  placeholderImage: ViewStyle;  
+  editBadge: ViewStyle;
+  chartCardContainer: ViewStyle;
+
+
+  navLogo: ImageStyle;
+  profileBannerImage: ImageStyle
+  profileImage: ImageStyle;   
+
+  
+  profileName: TextStyle;
+  sectionTitleProjects: TextStyle
+  sectionTitle: TextStyle;
+  TaskSummaryText: TextStyle
+  groupCardText: TextStyle;
   tabText: TextStyle
   activeTabText: TextStyle
   placeholderText_Project: TextStyle
-  createProjectButton: ViewStyle;
   createProjectText: TextStyle;
-
-  imageContainer: ViewStyle;
-  profileImage: ImageStyle;      // Uses ImageStyle because it targets the actual user photo
-  placeholderImage: ViewStyle;    // Uses ViewStyle because it acts as the dashed container box
   placeholderText: TextStyle;
-  editBadge: ViewStyle;
   editText: TextStyle;
-
 }
 
+const myWeeklyTasks = [
+  { day: 'Mon', tasks: 0 },
+  { day: 'Tue', tasks: 0 },
+  { day: 'Wed', tasks: 0 },
+  { day: 'Thu', tasks: 0 },
+  { day: 'Fri', tasks: 0 },
+  { day: 'Sat', tasks: 0 },
+  { day: 'Sun', tasks: 0 },
+];
 const SIDEBAR_DATA = [
   { title: 'UMBC Campus', icon: '🎓' },
   { title: 'Security', icon: '🛡️' },
@@ -56,26 +66,25 @@ const SIDEBAR_DATA = [
 ];
 
 export default function Index() {
-  const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState('Your Projects');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => setUser(session?.user ?? null),
-    );
-    return () => subscription.unsubscribe();
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  const name = [user?.user_metadata.first_name, user?.user_metadata.last_name]
-    .filter((part) => typeof part === "string" && part.trim())
-    .join(" ") || user?.email || "Your account";
-
-  const [activeTab, setActiveTab] = useState('Your Projects');
-  const router = useRouter();
+  // getHours() always returns 0-23 regardless of 12h/24h phone settings, 0 to 11 = AM | 12 to 23 = PM
+  const isPM = currentTime.getHours() >= 12;
+  
+  
   // 1. All hook dependencies execute unconditionally at the top level
   const { width } = useWindowDimensions(); 
   const [hasHydrated, setHasHydrated] = useState<boolean>(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-
 
   useEffect(() => {
     setHasHydrated(true);
@@ -84,71 +93,6 @@ export default function Index() {
   // 2. Generate styles safely
   const styles = createStyles(width);
   
-  const [files, setFiles] = useState<UploadedFile[]>([]);
-
-  const addFile = (f: any) => setFiles((p) => [...p, {
-    id: Math.random().toString(36).substring(2, 9),
-    name: f.name || 'Unnamed PDF',
-    uri: f.uri,
-    size: f.size,
-    uploadedAt: new Date().toLocaleTimeString(),
-  }]);
-
-
-
-  
-  const pickImage = async () => {
-    const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== "granted") {
-      Alert.alert("Permission needed", "We need camera roll permissions to select a profile image.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1,1],
-      quality: 0.8,
-    })
-    if (!result.canceled && result.assets[0]) {
-      setProfileImage(result.assets[0].uri);
-    }
-  }
-  const takePhoto = async () => {
-    const {status} = await ImagePicker.requestCameraPermissionsAsync()
-    if (status !== "granted") {
-      Alert.alert("Permission needed", "We need camera permissions to take a photo.");
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1,1],
-      quality: 0.8,
-    })
-    if (!result.canceled && result.assets[0]) {
-      setProfileImage(result.assets[0].uri);
-    }
-  }
-  const showImagePicker = async () => {
-    if (Platform.OS === 'web') {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'image/*', // Limit selection to images only
-        copyToCacheDirectory: true,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-       setProfileImage(result.assets[0].uri);
-      }
-      return;
-    }
-    if (Platform.OS === 'android' || Platform.OS === "ios"){
-      Alert.alert("Select Profile Image", "Choose an option",[
-        {text: "Camera", onPress: takePhoto },
-        {text: "Photo Library", onPress: pickImage},
-        {text: "Cancel", style: "cancel"}
-      ]);
-    }
-  }
-
   return (
     <View style={styles.screenContainer}>
       {!hasHydrated ? (
@@ -160,7 +104,10 @@ export default function Index() {
           <View style={styles.stickyHeaderWrapper}>
             <View style={styles.topNavbar}>
               <View style={styles.innerNavbar}>
-                <Text style={styles.navLogo}>myUMBC</Text>
+                <Image 
+                  source={require("../../../assets/images/myumbclogo.png")} 
+                  style={styles.navLogo} 
+                />
               </View>
             </View>
           </View>
@@ -176,21 +123,29 @@ export default function Index() {
               
               {/* UPPER ZONE: Events & Dates */}
               <View style={styles.heroSection}>
-                <Image source={require("../../../assets/images/umbc_day_sign.png")} style={styles.profileBannerImage}/>
+                <View style={styles.profilebannerBox}>
+                  <Image source={
+                    isPM
+                      ? require('../../../assets/images/umbc_night_book.png') // Shown from 12:00 PM to 11:59 PM
+                      : require("../../../assets/images/umbc_day_sign.png")   // Shown from 12:00 AM to 11:59 AM 
+                    } 
+                    style={styles.profileBannerImage}
+                  />
+                </View>
 
-                <TouchableOpacity style={styles.imageContainer} onPress={showImagePicker}>
+                <TouchableOpacity style={styles.imageContainer} onPress={() => showImagePicker(setProfileImage)}>
                   {profileImage ? (<Image source={{uri: profileImage}} style={styles.profileImage} />) : ( 
-                      <View style={styles.placeholderImage}>
-                          <Text style={styles.placeholderText}>+</Text>
-                      </View>
+                    <View style={styles.placeholderImage}>
+                      <Text style={styles.placeholderText}>+</Text>
+                    </View>
                   )} 
                   
                   <View style={styles.editBadge}>
-                      <Text style={styles.editText}>Edit</Text>
+                    <Text style={styles.editText}>Edit</Text>
                   </View>
                 </TouchableOpacity>
 
-                <Text style={styles.profileName}>{name}</Text>
+                <Text style={styles.profileName}>Your Fullname</Text>
               </View>
 
               {/* LOWER ZONE: 2-Column Side-by-Side Content Grid */}
@@ -198,22 +153,15 @@ export default function Index() {
                 
                 {/* LOWER LEFT: Project Feed Section */}
                 <View style={styles.leftProjectColumn}>
-
-                  <Text style={styles.sectionTitleProjects}>Projects</Text>
-
-
-                  <PickerWrapper onFilePicked={addFile}>
-                    {(openPicker) => (
-                    <View>
-                      {/* The touch layer isolates strictly around the text boundaries */}
-                      <TouchableOpacity style={styles.createProjectButton}  onPress={openPicker}>
-                        <Text style={styles.createProjectText}>Create Project +</Text>
-                      </TouchableOpacity>
-                    </View>
-                    )}
-                  </PickerWrapper>
-
-                  
+                  <Text style={styles.sectionTitleProjects}>My Projects</Text>
+                  <View>
+                    {/*Integration of the My Projects page*/}
+                    {/* The touch layer isolates strictly around the text boundaries */}
+                    <TouchableOpacity style={styles.createProjectButton}  onPress={() => router.push("/my_projects_page")}>
+                      <Text style={styles.createProjectText}>Go To My Projects</Text>
+                    </TouchableOpacity>
+                  </View>
+                                   
                   <View style={styles.tabBar}>
                     <TouchableOpacity 
                       onPress={() => setActiveTab('Your Projects')}
@@ -234,18 +182,15 @@ export default function Index() {
                     </TouchableOpacity>
                   </View>
 
-
                   {activeTab === 'Your Projects' ? (
-                    <FlatList
-                      data={files}
-                      keyExtractor={(item) => item.id}
-                      ListEmptyComponent={<EmptyPlaceholder />}
-                      renderItem={({ item }) => <FileCard item={item} onDelete={(id) => setFiles((p) => p.filter(x => x.id !== id))} />}
-                      nestedScrollEnabled={true} 
-                      scrollEnabled={false}
-                      showsVerticalScrollIndicator={true}
-                      
-                    />
+                    <View style={styles.chartCardContainer}>
+                      <WeeklyTaskChart
+                        data={myWeeklyTasks}
+                        height={240}
+                        lineColor="#10B981"
+                        pointColor="#10B981"
+                      />
+                    </View>
                   ) : (
                     /* Render your shared projects list view here */
                     <Text style={styles.placeholderText_Project}>No Shared Projects...</Text>
@@ -253,23 +198,19 @@ export default function Index() {
                 </View>
 
                 
-
                 {/* LOWER RIGHT: Sidebar Layout */}
                 <View style={styles.rightGroupsColumn}>
-                  
                   {/* FIRST MODULE: Upper Task Summary Groups */}
                   <View style={styles.sidebarContainer}>
                     <Text style={styles.sectionTitle}>Task Summary Reports</Text>
                     <TouchableOpacity style={styles.TaskSummaryButton} onPress={() => router.push("/my_task_summary")}>
-                        <Text style={styles.TaskSummaryText}>0 Reports</Text>
+                      <Text style={styles.TaskSummaryText}>0 Reports</Text>
                     </TouchableOpacity>
                     
                   </View>
-
                   {/* SECOND MODULE: Comments Groups underneath */}
                   <View style={styles.sidebarContainer}>
-                    <Text style={styles.sectionTitle}>Comments</Text>
-                    
+                    <Text style={styles.sectionTitle}>Recent</Text>
                     <View style={styles.scrollBoxWrapper}>
                       {/* Clean, error-free alternative to FlatList that uses your exact dynamic properties */}
                       <ScrollView 
@@ -289,9 +230,7 @@ export default function Index() {
                       </ScrollView>
                     </View>
                   </View>
-
                 </View>
-
               </View>
             </View>
           </ScrollView>
@@ -338,9 +277,11 @@ const createStyles = (width: number): DashboardStyles => {
       borderRadius: 8,
     },
     navLogo: {
-      color: '#fff',
-      fontSize: 20,
-      fontWeight: 'bold',
+      position: 'absolute',
+      left: -500,
+      width: "100%",
+      height: 50,
+      resizeMode: 'contain',
     },
     mainScroll: {
       flex: 1,
@@ -361,12 +302,21 @@ const createStyles = (width: number): DashboardStyles => {
       paddingHorizontal: 15,
       borderWidth: 0,
     },
+    profilebannerBox:{
+      position: "relative",
+      width: "100%",
+      aspectRatio: 3.5, // Controls the exact banner shape
+      top: 0,
+      borderWidth: 3,
+      borderColor: "transparent",
+      borderRadius: 12,
+      overflow: "hidden",
+    },
     profileBannerImage: {
       width: "100%",
-      resizeMode: 'cover',
+      height: "100%",       // Matches the exact height of profilebannerBox
+      resizeMode: "cover",  // Fills edge-to-edge with zero white bars
     },
-
-
     profileName: {
       fontSize: 30,
       fontWeight: 'bold',
@@ -392,7 +342,6 @@ const createStyles = (width: number): DashboardStyles => {
       width: '100%',
       marginBottom: 32, // Spacing gap separating the top widget block from the bottom widget block
     },
-
     sectionTitleProjects: {
       fontSize: 30,
       top: -12.2,
@@ -403,7 +352,6 @@ const createStyles = (width: number): DashboardStyles => {
       borderBottomColor: '#E0E0E0',
       paddingBottom: 8,
     },
-    
     sectionTitle: {
       fontSize: 20,
       fontWeight: 'bold',
@@ -413,7 +361,6 @@ const createStyles = (width: number): DashboardStyles => {
       borderBottomColor: '#E0E0E0',
       paddingBottom: 8,
     },
-
     TaskSummaryButton: {
       alignSelf: 'center',       
     },
@@ -423,7 +370,6 @@ const createStyles = (width: number): DashboardStyles => {
       fontWeight: '500',
       
     },
-
     groupCardItem: {
       width: '100%',
       paddingVertical: 12,
@@ -439,10 +385,7 @@ const createStyles = (width: number): DashboardStyles => {
       color: '#444',
       fontWeight: '500',
     },
-
-
-    // Start of Tab bar For Project Container
-    tabBar: {
+    tabBar: {  // Start of Tab bar For Project Container
       position: "absolute",
       top: "0%",
       left: "25%",
@@ -477,22 +420,17 @@ const createStyles = (width: number): DashboardStyles => {
       color: '#333',
       fontSize: 14,
     },
-
     textLinkSpacing: {
-      // Only apply layout margins to separate items, avoid adding padding!
       marginBottom: 12, 
-      // This forces the touch boundary box to collapse tightly around the font glyphs
       alignSelf: 'flex-start', 
     },
-
     createProjectButton: {
-      // Zero internal padding ensures only the explicit text area responds to clicks
       alignSelf: 'flex-end', 
       padding: 8,
       paddingHorizontal: 20,
       paddingVertical: 6,
-      marginBottom: 2,
-      marginTop: -10,
+      marginBottom:0,
+      marginTop: -70,
       borderRadius: 6,
       borderColor: "#10B981",
       borderWidth: 3,           
@@ -502,8 +440,6 @@ const createStyles = (width: number): DashboardStyles => {
       fontWeight: '600',
       color: '#10B981',             
     },
-
-
     imageContainer: {
       marginBottom: 32,
       position: "absolute",
@@ -548,6 +484,15 @@ const createStyles = (width: number): DashboardStyles => {
       color: "#fff",
       fontSize: 12,
       fontWeight: "600",
+    },
+    chartCardContainer: {
+      width: '100%',
+      backgroundColor: "transparent",
+      borderColor: "#d7d9dd",
+      borderStyle: "solid",
+      borderWidth: 1,
+      borderRadius: 3,
+      boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.3)',
     },
   });
 };
