@@ -2,42 +2,56 @@
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Get started
+## To start the frontend
 
-1. Install dependencies
+From the repository root, use Node.js 24 or newer:
 
-   ```bash
-   npm install
+```bash
+npm install                     # First run, or after dependencies change
+npm run web -- --port 8081
+```
 
-   npx expo install expo-document-picker expo-file-system expo-sharing react-native-svg react-native-view-shot @dariyd/react-native-pdf-page-image pdfjs-dist pdf-lib
+Open http://localhost:8081 in your browser, or http://localhost:8081/signup to test signup. Frontend screens live in `src/app/`.
 
-   npx expo install react-native-webview 
+## To start the backend
 
-   npm uninstall react-native-pdf-thumbnail      
+#### first-time setup
+In a second terminal, start from the repository root. Set up Python dependencies **once**:
 
-   npx expo install expo-image-picker  
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install django django-cors-headers python-dotenv supabase
+```
 
-   npx expo install expo-file-system expo-sharing expo-print
+Create a `.env` file in the **repository root** (beside `package.json`, not inside `backend/`) with your Supabase project values:
 
-   npx expo install pdfjs-serverless
-   ```
+```dotenv
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+SUPABASE_SECRET_KEY=YOUR_BACKEND_SECRET_KEY
+SUPABASE_PDF_BUCKET=YOUR_PUBLIC_PDF_BUCKET_NAME
+EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+```
 
-2. Start the app
+#### Start Django on port **8000**, matching `API_URL` in `src/lib/supabase.ts`:
 
-   ```bash
-   npx expo start
-   ```
+```bash
+source .venv/bin/activate
+python backend/manage.py migrate       # First run, or after Django migrations change
+python backend/manage.py runserver 127.0.0.1:8000
+```
 
-In the output, you'll find options to open the app in a
+Keep both terminals running while testing; press `Ctrl+C` in each to stop. These instructions target browser testing on the same computer. CORS is configured for frontend port **8081**.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+For signup testing, the Supabase profile-creation trigger must be installed, and `http://localhost:8081/login` must be allowed under **Authentication → URL Configuration → Redirect URLs**. Django migrations initialize its local SQLite tables; they do not install the Supabase trigger.
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Authentication is connected to Django and Supabase. **Go To My Projects** opens the new project workspace from main; its projects and annotations are currently kept only in memory. The Django project endpoints and frontend request helper are preserved, but connecting them to this new flow is the next step.
 
-## Get a fresh project
+## Additional information
+
+### Get a fresh project
 
 When you're ready, run:
 
@@ -45,7 +59,7 @@ When you're ready, run:
 npm run reset-project
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
 ### Other setup steps
 

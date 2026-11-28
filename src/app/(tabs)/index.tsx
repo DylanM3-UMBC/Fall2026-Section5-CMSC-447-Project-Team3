@@ -1,3 +1,6 @@
+import { supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
+import ProfileMenu from "../../../components/ProfileMenu";
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, ImageStyle, ScrollView, StyleSheet, Text, TextStyle, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
@@ -66,6 +69,19 @@ const SIDEBAR_DATA = [
 ];
 
 export default function Index() {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => setUser(session?.user ?? null),
+    );
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const name = [user?.user_metadata.first_name, user?.user_metadata.last_name]
+    .filter((part) => typeof part === "string" && part.trim())
+    .join(" ") || user?.email || "Your account";
+
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('Your Projects');
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -108,6 +124,7 @@ export default function Index() {
                   source={require("../../../assets/images/myumbclogo.png")} 
                   style={styles.navLogo} 
                 />
+                <View style={{ marginLeft: "auto" }}><ProfileMenu /></View>
               </View>
             </View>
           </View>
@@ -145,7 +162,7 @@ export default function Index() {
                   </View>
                 </TouchableOpacity>
 
-                <Text style={styles.profileName}>Your Fullname</Text>
+                <Text style={styles.profileName}>{name}</Text>
               </View>
 
               {/* LOWER ZONE: 2-Column Side-by-Side Content Grid */}

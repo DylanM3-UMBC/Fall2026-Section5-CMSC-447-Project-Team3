@@ -24,6 +24,13 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow access to your photos to choose a profile picture.",
+          "cameraPermission": "Allow access to your camera to take a profile picture."
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",
