@@ -29,7 +29,7 @@ export default function RootLayout() {
       }
     };
 
-    updateAutoRefresh(AppState.currentState);
+    updateAutoRefresh(AppState.currentState ?? "active");
     const listener = AppState.addEventListener("change", updateAutoRefresh);
 
     return () => {

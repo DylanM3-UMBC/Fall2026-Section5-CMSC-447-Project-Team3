@@ -4,7 +4,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 ## To start the frontend
 
-From the repository root, use Node.js 22.13 or newer:
+From the repository root, use Node.js 24 or newer:
 
 ```bash
 npm install                     # First run, or after dependencies change
@@ -29,9 +29,13 @@ Create a `.env` file in the **repository root** (beside `package.json`, not insi
 ```dotenv
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+SUPABASE_SECRET_KEY=YOUR_BACKEND_SECRET_KEY
+SUPABASE_PDF_BUCKET=YOUR_PUBLIC_PDF_BUCKET_NAME
+EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 ```
 
-#### Start Django on port **5000**, matching the frontend signup URL:
+#### Start Django on port **8000**, matching `API_URL` in `src/lib/supabase.ts`:
 
 ```bash
 source .venv/bin/activate
@@ -42,6 +46,8 @@ python backend/manage.py runserver 127.0.0.1:8000
 Keep both terminals running while testing; press `Ctrl+C` in each to stop. These instructions target browser testing on the same computer. CORS is configured for frontend port **8081**.
 
 For signup testing, the Supabase profile-creation trigger must be installed, and `http://localhost:8081/login` must be allowed under **Authentication → URL Configuration → Redirect URLs**. Django migrations initialize its local SQLite tables; they do not install the Supabase trigger.
+
+Authentication is connected to Django and Supabase. **Go To My Projects** opens the new project workspace from main; its projects and annotations are currently kept only in memory. The Django project endpoints and frontend request helper are preserved, but connecting them to this new flow is the next step.
 
 ## Additional information
 

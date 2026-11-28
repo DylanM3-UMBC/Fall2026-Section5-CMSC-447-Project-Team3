@@ -1,71 +1,66 @@
-import { supabase, MAX_FILE_SIZE } from "@/lib/supabase";
-import { authenticatedFetch } from "@/lib/api";
-import type { DocumentPickerAsset } from "expo-document-picker";
+import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
-import * as DocumentPicker from 'expo-document-picker';
-import * as ImagePicker from "expo-image-picker";
+import ProfileMenu from "../../../components/ProfileMenu";
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, Image, ImageStyle, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TextStyle, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
-import { EmptyPlaceholder, FileCard, UploadedFile } from '../../../components/pdfprojectItemComponent';
-import ProfileMenu from '../../../components/ProfileMenu';
-
-interface Project {
-  project_name: string;
-  pdf_url: string;
-}
-
-function toFileCard(project: Project): UploadedFile {
-  return {
-    id: project.pdf_url,
-    name: project.project_name,
-    uri: project.pdf_url,
-    uploadedAt: "",
-  };
-}
-
+import { Image, ImageStyle, ScrollView, StyleSheet, Text, TextStyle, TouchableOpacity, useWindowDimensions, View, ViewStyle } from 'react-native';
+import { showImagePicker } from '../../../components/imageProfilePicker';
+import WeeklyTaskChart from '../../../components/weeklyTaskChart';
 
 interface DashboardStyles {
   screenContainer: ViewStyle;
   stickyHeaderWrapper: ViewStyle;
   topNavbar: ViewStyle;
   innerNavbar: ViewStyle;
-  navLogo: ImageStyle;
   mainScroll: ViewStyle;
   scrollContent: ViewStyle;
   centerLayoutWrapper: ViewStyle;
   heroSection: ViewStyle;
-  profileName: TextStyle;
   gridRow: ViewStyle;
   leftProjectColumn: ViewStyle;
   rightGroupsColumn: ViewStyle;
   sidebarContainer: ViewStyle;
-  sectionTitleProjects: TextStyle
-  sectionTitle: TextStyle;
   groupCardItem: ViewStyle;
   TaskSummaryButton: ViewStyle
-  TaskSummaryText: TextStyle
-  groupCardText: TextStyle;
-  profileBannerImage: ImageStyle
+  profilebannerBox: ViewStyle
   scrollBoxWrapper: ViewStyle
   tabBar: ViewStyle
   tabButton: ViewStyle
   activeTabButton: ViewStyle
+  createProjectButton: ViewStyle;
+  imageContainer: ViewStyle;
+  placeholderImage: ViewStyle;  
+  editBadge: ViewStyle;
+  chartCardContainer: ViewStyle;
+
+
+  navLogo: ImageStyle;
+  profileBannerImage: ImageStyle
+  profileImage: ImageStyle;   
+
+  
+  profileName: TextStyle;
+  sectionTitleProjects: TextStyle
+  sectionTitle: TextStyle;
+  TaskSummaryText: TextStyle
+  groupCardText: TextStyle;
   tabText: TextStyle
   activeTabText: TextStyle
   placeholderText_Project: TextStyle
-  createProjectButton: ViewStyle;
   createProjectText: TextStyle;
-
-  imageContainer: ViewStyle;
-  profileImage: ImageStyle;      // Uses ImageStyle because it targets the actual user photo
-  placeholderImage: ViewStyle;    // Uses ViewStyle because it acts as the dashed container box
   placeholderText: TextStyle;
-  editBadge: ViewStyle;
   editText: TextStyle;
-
 }
 
+const myWeeklyTasks = [
+  { day: 'Mon', tasks: 0 },
+  { day: 'Tue', tasks: 0 },
+  { day: 'Wed', tasks: 0 },
+  { day: 'Thu', tasks: 0 },
+  { day: 'Fri', tasks: 0 },
+  { day: 'Sat', tasks: 0 },
+  { day: 'Sun', tasks: 0 },
+];
 const SIDEBAR_DATA = [
   { title: 'UMBC Campus', icon: '🎓' },
   { title: 'Security', icon: '🛡️' },
@@ -87,13 +82,25 @@ export default function Index() {
     .filter((part) => typeof part === "string" && part.trim())
     .join(" ") || user?.email || "Your account";
 
-  const [activeTab, setActiveTab] = useState('Your Projects');
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState('Your Projects');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // getHours() always returns 0-23 regardless of 12h/24h phone settings, 0 to 11 = AM | 12 to 23 = PM
+  const isPM = currentTime.getHours() >= 12;
+  
+  
   // 1. All hook dependencies execute unconditionally at the top level
   const { width } = useWindowDimensions(); 
   const [hasHydrated, setHasHydrated] = useState<boolean>(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-
 
   useEffect(() => {
     setHasHydrated(true);
@@ -102,161 +109,6 @@ export default function Index() {
   // 2. Generate styles safely
   const styles = createStyles(width);
   
-  const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [pdf, setPdf] = useState<DocumentPickerAsset | null>(null);
-  const [projectName, setProjectName] = useState("");
-  const [description, setDescription] = useState("");
-  const [formError, setFormError] = useState("");
-
-  const resetForm = () => {
-    setPdf(null);
-    setProjectName("");
-    setDescription("");
-    setFormError("");
-  };
-
-  const closeCreate = () => {
-    if (uploading) return;
-    setShowCreate(false);
-    resetForm();
-  };
-
-  const pickPdf = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "application/pdf",
-        copyToCacheDirectory: true,
-      });
-      if (result.canceled) return;
-      const selected = result.assets[0];
-      if (selected.size && selected.size > MAX_FILE_SIZE) {
-        setFormError("PDF must be 10 MB or smaller.");
-        return;
-      }
-      setPdf(selected);
-      setProjectName(selected.name);
-      setFormError("");
-    } catch {
-      setFormError("Could not open the file picker. Please try again.");
-    }
-  };
-
-  const loadProjects = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await authenticatedFetch("/projects");
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not load projects.");
-      setFiles(data.projects.map(toFileCard));
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "Could not load projects.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadProjects();
-  }, []);
-
-  const createProject = async () => {
-    if (uploading || loading) return;
-    setFormError("");
-    if (!pdf || !projectName.trim()) {
-      setFormError("Floor Plan PDF and Project Name are required.");
-      return;
-    }
-    const file = pdf;
-
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.append("project_name", projectName.trim());
-      form.append("project_desc", description.trim());
-      if (Platform.OS === "web") {
-        if (!file.file) throw new Error("Could not read the selected PDF. Please select it again.");
-        form.append("pdf", file.file, file.name);
-      } else {
-        // React Native accepts a file URI object for multipart uploads.
-        form.append("pdf", {
-          uri: file.uri,
-          name: file.name,
-          type: "application/pdf",
-        } as unknown as Blob);
-      }
-
-      const response = await authenticatedFetch("/projects", { method: "POST", body: form });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not create project.");
-      setFiles((previous) => [toFileCard(data.project), ...previous]);
-      setActiveTab("Your Projects");
-      setShowCreate(false);
-      resetForm();
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Could not upload PDF.");
-    } finally {
-      setUploading(false);
-    }
-  };
- 
-  
-  const pickImage = async () => {
-    const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== "granted") {
-      Alert.alert("Permission needed", "We need camera roll permissions to select a profile image.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1,1],
-      quality: 0.8,
-    })
-    if (!result.canceled && result.assets[0]) {
-      setProfileImage(result.assets[0].uri);
-    }
-  }
-  const takePhoto = async () => {
-    const {status} = await ImagePicker.requestCameraPermissionsAsync()
-    if (status !== "granted") {
-      Alert.alert("Permission needed", "We need camera permissions to take a photo.");
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1,1],
-      quality: 0.8,
-    })
-    if (!result.canceled && result.assets[0]) {
-      setProfileImage(result.assets[0].uri);
-    }
-  }
-  const showImagePicker = async () => {
-    if (Platform.OS === 'web') {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'image/*', // Limit selection to images only
-        copyToCacheDirectory: true,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-       setProfileImage(result.assets[0].uri);
-      }
-      return;
-    }
-    if (Platform.OS === 'android' || Platform.OS === "ios"){
-      Alert.alert("Select Profile Image", "Choose an option",[
-        {text: "Camera", onPress: takePhoto },
-        {text: "Photo Library", onPress: pickImage},
-        {text: "Cancel", style: "cancel"}
-      ]);
-    }
-  }
-
   return (
     <View style={styles.screenContainer}>
       {!hasHydrated ? (
@@ -272,11 +124,8 @@ export default function Index() {
                   source={require("../../../assets/images/myumbclogo.png")} 
                   style={styles.navLogo} 
                 />
-                <View style={{ marginLeft: 'auto' }}>
-                  <ProfileMenu />
-                </View>
+                <View style={{ marginLeft: "auto" }}><ProfileMenu /></View>
               </View>
-
             </View>
           </View>
 
@@ -291,17 +140,25 @@ export default function Index() {
               
               {/* UPPER ZONE: Events & Dates */}
               <View style={styles.heroSection}>
-                <Image source={require("../../../assets/images/umbc_day_sign.png")} style={styles.profileBannerImage}/>
+                <View style={styles.profilebannerBox}>
+                  <Image source={
+                    isPM
+                      ? require('../../../assets/images/umbc_night_book.png') // Shown from 12:00 PM to 11:59 PM
+                      : require("../../../assets/images/umbc_day_sign.png")   // Shown from 12:00 AM to 11:59 AM 
+                    } 
+                    style={styles.profileBannerImage}
+                  />
+                </View>
 
-                <TouchableOpacity style={styles.imageContainer} onPress={showImagePicker}>
+                <TouchableOpacity style={styles.imageContainer} onPress={() => showImagePicker(setProfileImage)}>
                   {profileImage ? (<Image source={{uri: profileImage}} style={styles.profileImage} />) : ( 
-                      <View style={styles.placeholderImage}>
-                          <Text style={styles.placeholderText}>+</Text>
-                      </View>
+                    <View style={styles.placeholderImage}>
+                      <Text style={styles.placeholderText}>+</Text>
+                    </View>
                   )} 
                   
                   <View style={styles.editBadge}>
-                      <Text style={styles.editText}>Edit</Text>
+                    <Text style={styles.editText}>Edit</Text>
                   </View>
                 </TouchableOpacity>
 
@@ -313,27 +170,15 @@ export default function Index() {
                 
                 {/* LOWER LEFT: Project Feed Section */}
                 <View style={styles.leftProjectColumn}>
-
-                  <Text style={styles.sectionTitleProjects}>Projects</Text>
-
-
-                  <TouchableOpacity
-                    style={styles.createProjectButton}
-                    disabled={loading || uploading}
-                    onPress={() => { resetForm(); setShowCreate(true); }}
-                  >
-                    <Text style={styles.createProjectText}>Create Project +</Text>
-                  </TouchableOpacity>
-                  {error ? (
-                    <View>
-                      <Text accessibilityRole="alert" style={{ color: "#a32121" }}>{error}</Text>
-                      <TouchableOpacity disabled={loading || uploading} onPress={loadProjects}>
-                        <Text>Reload projects</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
-
-                  
+                  <Text style={styles.sectionTitleProjects}>My Projects</Text>
+                  <View>
+                    {/*Integration of the My Projects page*/}
+                    {/* The touch layer isolates strictly around the text boundaries */}
+                    <TouchableOpacity style={styles.createProjectButton}  onPress={() => router.push("/my_projects_page")}>
+                      <Text style={styles.createProjectText}>Go To My Projects</Text>
+                    </TouchableOpacity>
+                  </View>
+                                   
                   <View style={styles.tabBar}>
                     <TouchableOpacity 
                       onPress={() => setActiveTab('Your Projects')}
@@ -354,18 +199,15 @@ export default function Index() {
                     </TouchableOpacity>
                   </View>
 
-
                   {activeTab === 'Your Projects' ? (
-                    <FlatList
-                      data={files}
-                      keyExtractor={(item) => item.id}
-                      ListEmptyComponent={loading ? <Text>Loading projects…</Text> : error ? null : <EmptyPlaceholder />}
-                      renderItem={({ item }) => <FileCard item={item} />}
-                      nestedScrollEnabled={true} 
-                      scrollEnabled={false}
-                      showsVerticalScrollIndicator={true}
-                      
-                    />
+                    <View style={styles.chartCardContainer}>
+                      <WeeklyTaskChart
+                        data={myWeeklyTasks}
+                        height={240}
+                        lineColor="#10B981"
+                        pointColor="#10B981"
+                      />
+                    </View>
                   ) : (
                     /* Render your shared projects list view here */
                     <Text style={styles.placeholderText_Project}>No Shared Projects...</Text>
@@ -373,23 +215,19 @@ export default function Index() {
                 </View>
 
                 
-
                 {/* LOWER RIGHT: Sidebar Layout */}
                 <View style={styles.rightGroupsColumn}>
-                  
                   {/* FIRST MODULE: Upper Task Summary Groups */}
                   <View style={styles.sidebarContainer}>
                     <Text style={styles.sectionTitle}>Task Summary Reports</Text>
                     <TouchableOpacity style={styles.TaskSummaryButton} onPress={() => router.push("/my_task_summary")}>
-                        <Text style={styles.TaskSummaryText}>0 Reports</Text>
+                      <Text style={styles.TaskSummaryText}>0 Reports</Text>
                     </TouchableOpacity>
                     
                   </View>
-
                   {/* SECOND MODULE: Comments Groups underneath */}
                   <View style={styles.sidebarContainer}>
-                    <Text style={styles.sectionTitle}>Comments</Text>
-                    
+                    <Text style={styles.sectionTitle}>Recent</Text>
                     <View style={styles.scrollBoxWrapper}>
                       {/* Clean, error-free alternative to FlatList that uses your exact dynamic properties */}
                       <ScrollView 
@@ -409,44 +247,12 @@ export default function Index() {
                       </ScrollView>
                     </View>
                   </View>
-
                 </View>
-
               </View>
             </View>
           </ScrollView>
         </>
       )}
-      <Modal visible={showCreate} transparent animationType="fade" onRequestClose={closeCreate}>
-        <View style={formStyles.modalBackdrop}>
-          <View style={formStyles.createModal} accessibilityViewIsModal>
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={formStyles.formContent}>
-              <Text style={formStyles.formTitle}>Create Project</Text>
-              <Text style={formStyles.fieldLabel}>Floor Plan PDF *</Text>
-              <TouchableOpacity accessibilityRole="button" disabled={uploading} onPress={pickPdf} style={formStyles.pdfPicker}>
-                <Text>{pdf ? pdf.name : "Choose PDF"}</Text>
-              </TouchableOpacity>
-              <Text style={formStyles.fieldHint}>PDF only, up to 10 MB. Click to choose or replace.</Text>
-
-              <Text style={formStyles.fieldLabel}>Project Name *</Text>
-              <TextInput accessibilityLabel="Project Name, required" style={formStyles.formInput} value={projectName} onChangeText={setProjectName} editable={!uploading} placeholder="Enter project name" />
-
-              <Text style={formStyles.fieldLabel}>Project Description</Text>
-              <TextInput accessibilityLabel="Project Description" style={[formStyles.formInput, formStyles.descriptionInput]} value={description} onChangeText={setDescription} editable={!uploading} placeholder="Describe the project (optional)" multiline textAlignVertical="top" />
-              {formError ? <Text accessibilityRole="alert" style={formStyles.formError}>{formError}</Text> : null}
-
-              <View style={formStyles.formActions}>
-                <TouchableOpacity accessibilityRole="button" disabled={uploading} onPress={closeCreate} style={[formStyles.formButton, uploading && formStyles.disabledButton]}>
-                  <Text>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity accessibilityRole="button" disabled={uploading || !pdf || !projectName.trim()} onPress={createProject} style={[formStyles.formButton, formStyles.submitButton, (uploading || !pdf || !projectName.trim()) && formStyles.disabledButton]}>
-                  <Text style={{ fontWeight: "600" }}>{uploading ? "Creating…" : "Submit"}</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -488,7 +294,9 @@ const createStyles = (width: number): DashboardStyles => {
       borderRadius: 8,
     },
     navLogo: {
-      width: 150,
+      position: 'absolute',
+      left: -500,
+      width: "100%",
       height: 50,
       resizeMode: 'contain',
     },
@@ -511,12 +319,21 @@ const createStyles = (width: number): DashboardStyles => {
       paddingHorizontal: 15,
       borderWidth: 0,
     },
+    profilebannerBox:{
+      position: "relative",
+      width: "100%",
+      aspectRatio: 3.5, // Controls the exact banner shape
+      top: 0,
+      borderWidth: 3,
+      borderColor: "transparent",
+      borderRadius: 12,
+      overflow: "hidden",
+    },
     profileBannerImage: {
       width: "100%",
-      resizeMode: 'cover',
+      height: "100%",       // Matches the exact height of profilebannerBox
+      resizeMode: "cover",  // Fills edge-to-edge with zero white bars
     },
-
-
     profileName: {
       fontSize: 30,
       fontWeight: 'bold',
@@ -542,7 +359,6 @@ const createStyles = (width: number): DashboardStyles => {
       width: '100%',
       marginBottom: 32, // Spacing gap separating the top widget block from the bottom widget block
     },
-
     sectionTitleProjects: {
       fontSize: 30,
       top: -12.2,
@@ -553,7 +369,6 @@ const createStyles = (width: number): DashboardStyles => {
       borderBottomColor: '#E0E0E0',
       paddingBottom: 8,
     },
-    
     sectionTitle: {
       fontSize: 20,
       fontWeight: 'bold',
@@ -563,7 +378,6 @@ const createStyles = (width: number): DashboardStyles => {
       borderBottomColor: '#E0E0E0',
       paddingBottom: 8,
     },
-
     TaskSummaryButton: {
       alignSelf: 'center',       
     },
@@ -573,7 +387,6 @@ const createStyles = (width: number): DashboardStyles => {
       fontWeight: '500',
       
     },
-
     groupCardItem: {
       width: '100%',
       paddingVertical: 12,
@@ -589,10 +402,7 @@ const createStyles = (width: number): DashboardStyles => {
       color: '#444',
       fontWeight: '500',
     },
-
-
-    // Start of Tab bar For Project Container
-    tabBar: {
+    tabBar: {  // Start of Tab bar For Project Container
       position: "absolute",
       top: "0%",
       left: "25%",
@@ -627,22 +437,17 @@ const createStyles = (width: number): DashboardStyles => {
       color: '#333',
       fontSize: 14,
     },
-
     textLinkSpacing: {
-      // Only apply layout margins to separate items, avoid adding padding!
       marginBottom: 12, 
-      // This forces the touch boundary box to collapse tightly around the font glyphs
       alignSelf: 'flex-start', 
     },
-
     createProjectButton: {
-      // Zero internal padding ensures only the explicit text area responds to clicks
       alignSelf: 'flex-end', 
       padding: 8,
       paddingHorizontal: 20,
       paddingVertical: 6,
-      marginBottom: 2,
-      marginTop: -10,
+      marginBottom:0,
+      marginTop: -70,
       borderRadius: 6,
       borderColor: "#10B981",
       borderWidth: 3,           
@@ -652,8 +457,6 @@ const createStyles = (width: number): DashboardStyles => {
       fontWeight: '600',
       color: '#10B981',             
     },
-
-
     imageContainer: {
       marginBottom: 32,
       position: "absolute",
@@ -699,22 +502,14 @@ const createStyles = (width: number): DashboardStyles => {
       fontSize: 12,
       fontWeight: "600",
     },
+    chartCardContainer: {
+      width: '100%',
+      backgroundColor: "transparent",
+      borderColor: "#d7d9dd",
+      borderStyle: "solid",
+      borderWidth: 1,
+      borderRadius: 3,
+      boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.3)',
+    },
   });
 };
-
-const formStyles = StyleSheet.create({
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center", padding: 24 },
-  createModal: { width: 520, maxWidth: "100%", maxHeight: "90%", borderRadius: 12, backgroundColor: "#fff" },
-  formContent: { padding: 24 },
-  formTitle: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
-  fieldLabel: { fontSize: 15, fontWeight: "600", marginBottom: 8, marginTop: 12 },
-  pdfPicker: { padding: 14, borderWidth: 1, borderColor: "#aaa", borderStyle: "dashed", borderRadius: 6 },
-  fieldHint: { color: "#666", fontSize: 12, marginTop: 6 },
-  formInput: { borderWidth: 1, borderColor: "#aaa", borderRadius: 6, padding: 12, fontSize: 16, color: "#222" },
-  descriptionInput: { minHeight: 110 },
-  formError: { color: "#a32121", marginTop: 12 },
-  formActions: { flexDirection: "row", justifyContent: "flex-end", gap: 12, marginTop: 24 },
-  formButton: { paddingHorizontal: 22, paddingVertical: 12, borderRadius: 6, backgroundColor: "#eee" },
-  submitButton: { backgroundColor: "#fdb515" },
-  disabledButton: { opacity: 0.5 },
-});
