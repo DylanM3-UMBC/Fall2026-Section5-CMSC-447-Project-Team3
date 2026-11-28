@@ -49,7 +49,7 @@ export default function RootLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={session !== null}>
+      <Stack.Protected guard={session !== null} redirectTo="/login">
         <Stack.Screen name="(tabs)" options={{ orientation: "landscape" }} />
       </Stack.Protected>
       <Stack.Protected guard={session === null}>
